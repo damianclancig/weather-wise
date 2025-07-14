@@ -1,6 +1,6 @@
 # WeatherWise - Pronóstico del Tiempo en Tiempo Real
 
-![Captura de Pantalla de WeatherWise](https://placehold.co/1200x630.png)
+![Captura de Pantalla de WeatherWise](./public/assets/screenshot.png)
 
 **WeatherWise** es una aplicación web moderna y elegante que proporciona pronósticos del tiempo en tiempo real para cualquier ciudad del mundo. Construida con tecnologías de vanguardia, ofrece una experiencia de usuario rápida, receptiva e intuitiva.
 
