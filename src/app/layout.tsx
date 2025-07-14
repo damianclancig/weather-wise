@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   metadataBase: APP_URL,
   applicationName: 'WeatherWise',
   keywords: ['clima', 'tiempo', 'pronóstico', 'temperatura', 'weather', 'forecast'],
-  authors: [{ name: 'Clancig', url: APP_URL }],
+  authors: [{ name: 'Clancig', url: new URL('https://github.com/damianclancig/weather-wise') }],
   creator: 'Clancig',
   openGraph: {
     type: 'website',
@@ -49,9 +49,9 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
   manifest: '/manifest.webmanifest',
 };
