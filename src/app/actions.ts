@@ -24,7 +24,7 @@ const processHourlyForecast = (hourlyItems: OWMForecastItem[], timezoneOffset: n
 };
 
 // Helper function to process and structure forecast data
-const processForecast = (forecastData: OWMForecast): DailyForecast[] => {
+const processForecast = (forecastData: OWMForecast): { daily: DailyForecast[], todayTemps: { min: number, max: number } } => {
   const dailyData: { [key: string]: OWMForecastItem[] } = {};
   const timezoneOffset = forecastData.city.timezone * 1000;
 
@@ -38,6 +38,13 @@ const processForecast = (forecastData: OWMForecast): DailyForecast[] => {
   });
   
   let sortedDays = Object.keys(dailyData).sort();
+
+  // Get today's min/max temps from the first day in the forecast list
+  const todayItems = dailyData[sortedDays[0]] || [];
+  const todayTemps = {
+    min: Math.min(...todayItems.map(i => i.main.temp_min)),
+    max: Math.max(...todayItems.map(i => i.main.temp_max)),
+  }
   
   // The first day in the list is always the current day, so we remove it to start from tomorrow.
   if (sortedDays.length > 1) {
@@ -51,7 +58,7 @@ const processForecast = (forecastData: OWMForecast): DailyForecast[] => {
 
     // For the main display, let's use the data from around midday if available
     const representativeItem = dayItems.find(i => new Date(i.dt * 1000).getUTCHours() >= 12) || dayItems[0];
-
+    
     return {
       dt: date,
       temp_min: Math.min(...dayItems.map(i => i.main.temp_min)),
@@ -68,7 +75,7 @@ const processForecast = (forecastData: OWMForecast): DailyForecast[] => {
     };
   });
   
-  return aggregatedForecast;
+  return { daily: aggregatedForecast, todayTemps };
 };
 
 
@@ -119,6 +126,7 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
     const currentWeatherData: OWMCurrentWeather = await currentWeatherResponse.json();
     const forecastData: OWMForecast = await forecastResponse.json();
     const timezoneOffset = forecastData.city.timezone * 1000;
+    const { daily: processedForecast, todayTemps } = processForecast(forecastData);
 
     const weatherData: WeatherData = {
       current: {
@@ -131,8 +139,13 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
         main: currentWeatherData.weather[0].main,
         pop: forecastData.list[0]?.pop ?? 0,
         dt: currentWeatherData.dt * 1000,
+        temp_min: todayTemps.min,
+        temp_max: todayTemps.max,
+        sunrise: currentWeatherData.sys.sunrise * 1000,
+        sunset: currentWeatherData.sys.sunset * 1000,
+        timezone: currentWeatherData.timezone * 1000,
       },
-      forecast: processForecast(forecastData),
+      forecast: processedForecast,
       hourly: processHourlyForecast(forecastData.list.slice(0, 8), timezoneOffset),
     };
 

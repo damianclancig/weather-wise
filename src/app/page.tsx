@@ -27,7 +27,7 @@ const initialState: FormState = {
 };
 
 // This new type will hold the data for the main display card
-type DisplayWeather = Omit<CurrentWeather, 'dt'> & { dt: number | string };
+type DisplayWeather = (CurrentWeather | DailyForecast) & { dt: number | string };
 
 export default function Home() {
   const [state, formAction] = useActionState(getWeather, initialState);
@@ -71,15 +71,8 @@ export default function Home() {
     
     // Construct the display data from the selected forecast day
     const newDisplayData: DisplayWeather = {
+      ...day,
       location: weatherData.current.location, // Location stays the same
-      dt: day.dt,
-      main: day.main,
-      description: day.description,
-      temp: day.temp,
-      feels_like: day.feels_like,
-      humidity: day.humidity,
-      wind_speed: day.wind_speed,
-      pop: day.pop,
     };
     
     setDisplayData(newDisplayData);
@@ -166,7 +159,7 @@ export default function Home() {
           ) : weatherData && displayData ? (
             <div key={displayData.location + displayData.dt} className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
               <div className="lg:col-span-3">
-                <CurrentWeatherComponent data={displayData as CurrentWeather} hourlyData={hourlyData} />
+                <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} />
               </div>
               <div className="lg:col-span-3">
                 <Forecast 

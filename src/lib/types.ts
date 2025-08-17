@@ -1,3 +1,4 @@
+
 // Our app's internal weather data structure
 export interface CurrentWeather {
   location: string;
@@ -9,6 +10,11 @@ export interface CurrentWeather {
   main: 'Clear' | 'Clouds' | 'Rain' | 'Snow' | 'Wind' | 'Mist' | 'Drizzle' | 'Thunderstorm' | string;
   pop: number;
   dt: number; // We add dt to be able to show the date in the card
+  temp_min: number;
+  temp_max: number;
+  sunrise: number;
+  sunset: number;
+  timezone: number;
 }
 
 export interface DailyForecast {
@@ -91,7 +97,7 @@ export interface OWMForecastItem {
     wind: { speed: number; deg: number; gust: number };
     visibility: number;
     pop: number;
-    sys: { pod: string };
+    sys: { pod: 'd' | 'n' };
     dt_txt: string;
 }
 

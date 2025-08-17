@@ -5,7 +5,7 @@ const en = {
   feelsLike: "Feels like",
   humidity: "Humidity",
   wind: "Wind",
-  precipitation: "Precipitation",
+  precipitation: "Precip.",
   forecastTitle: "5-Day Forecast",
   today: "Today",
   errorTitle: "Error",

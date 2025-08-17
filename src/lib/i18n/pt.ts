@@ -5,7 +5,7 @@ const pt = {
   feelsLike: "Sensação",
   humidity: "Umidade",
   wind: "Vento",
-  precipitation: "Precipitação",
+  precipitation: "Precip.",
   forecastTitle: "Previsão 5 dias",
   today: "Hoje",
   errorTitle: "Erro",
