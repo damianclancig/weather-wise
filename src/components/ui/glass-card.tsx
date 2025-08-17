@@ -17,7 +17,7 @@ export function GlassCard({
           )}
         />
       </div>
-      <div className="relative z-10 h-full w-full rounded-[14px] bg-card p-6">
+      <div className="relative z-10 h-full w-full rounded-[14px] bg-card p-2">
         {children}
       </div>
     </div>

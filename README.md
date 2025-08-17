@@ -12,13 +12,14 @@ La aplicación detecta automáticamente la ubicación del usuario para proporcio
 
 ## ✨ Características
 
-- **Datos Meteorológicos en Tiempo Real:** Obtén información actualizada al minuto sobre temperatura, humedad, velocidad del viento y probabilidad de precipitación.
+- **Datos Meteorológicos en Tiempo Real:** Obtén información actualizada al minuto sobre temperatura, sensación térmica, humedad, velocidad del viento y probabilidad de precipitación.
 - **Geolocalización:** Obtiene automáticamente el clima de tu ubicación actual al cargar la página.
 - **Búsqueda de Ciudades con Autocompletado:** Encuentra fácilmente cualquier ciudad del mundo con una barra de búsqueda inteligente que ofrece sugerencias mientras escribes.
-- **Pronóstico a 5 Días:** Planifica con antelación con un pronóstico detallado para los próximos cinco días.
+- **Pronóstico a 5 Días:** Planifica con antelación con un pronóstico detallado para los próximos cinco días. Al seleccionar un día, la tarjeta principal se actualiza con la información completa de esa fecha.
+- **Pronóstico por Horas:** Visualiza el pronóstico para las próximas horas en un carrusel interactivo dentro de la tarjeta principal.
 - **Diseño Receptivo:** Una interfaz totalmente receptiva que se ve genial en computadoras de escritorio, tabletas y dispositivos móviles.
-- **Interfaz de Usuario Dinámica:** Incluye iconos meteorológicos animados y un moderno diseño de "tarjeta de cristal".
-- **Soporte Multilingüe:** Interfaz disponible en inglés, español y portugués.
+- **Interfaz de Usuario Dinámica:** Incluye iconos meteorológicos animados y un moderno diseño de "tarjeta de cristal" con bordes iridiscentes.
+- **Soporte Multilingüe:** Interfaz disponible en inglés, español y portugués, que se adapta al idioma del navegador.
 
 ---
 
@@ -91,4 +92,4 @@ Este proyecto se distribuye bajo la Licencia MIT. Consulta el archivo `LICENSE` 
 
 ## 👨‍💻 Autor
 
-- **Clancig** - [Sitio Web](https://clancig.com.ar)
+- **Clancig** - [Sitio Web](https://clancig.com.ar) | [GitHub](https://github.com/damianclancig)

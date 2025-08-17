@@ -8,6 +8,7 @@ export interface CurrentWeather {
   description: string;
   main: 'Clear' | 'Clouds' | 'Rain' | 'Snow' | 'Wind' | 'Mist' | 'Drizzle' | 'Thunderstorm' | string;
   pop: number;
+  dt: number; // We add dt to be able to show the date in the card
 }
 
 export interface DailyForecast {
@@ -17,11 +18,28 @@ export interface DailyForecast {
   main: 'Clear' | 'Clouds' | 'Rain' | 'Snow' | 'Wind' | 'Mist' | 'Drizzle' | 'Thunderstorm' | string;
   description: string;
   pop: number;
+  // We'll store the hourly breakdown for each day here
+  hourly: HourlyForecast[]; 
+  // We also need some aggregated data for the main card display
+  humidity: number;
+  wind_speed: number;
+  temp: number;
+  feels_like: number;
 }
+
+export interface HourlyForecast {
+  time: string;
+  temp: number;
+  main: 'Clear' | 'Clouds' | 'Rain' | 'Snow' | 'Wind' | 'Mist' | 'Drizzle' | 'Thunderstorm' | string;
+  pop: number;
+}
+
 
 export interface WeatherData {
   current: CurrentWeather;
   forecast: DailyForecast[];
+  // The top-level hourly is now just for the current day
+  hourly: HourlyForecast[];
 }
 
 export interface CitySuggestion {
@@ -55,11 +73,7 @@ export interface OWMCurrentWeather {
   cod: number;
 }
 
-export interface OWMForecast {
-  cod: string;
-  message: number;
-  cnt: number;
-  list: {
+export interface OWMForecastItem {
     dt: number;
     main: {
       temp: number;
@@ -79,7 +93,13 @@ export interface OWMForecast {
     pop: number;
     sys: { pod: string };
     dt_txt: string;
-  }[];
+}
+
+export interface OWMForecast {
+  cod: string;
+  message: number;
+  cnt: number;
+  list: OWMForecastItem[];
   city: {
     id: number;
     name: string;

@@ -1,15 +1,16 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useActionState, useRef } from 'react';
 
-import type { WeatherData } from '@/lib/types';
+import type { WeatherData, DailyForecast, CurrentWeather, HourlyForecast } from '@/lib/types';
 import { getWeather } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { useTranslation } from '@/hooks/use-translation';
 
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
-import { CurrentWeather } from '@/components/weather/current-weather';
+import { CurrentWeather as CurrentWeatherComponent } from '@/components/weather/current-weather';
 import { Forecast } from '@/components/weather/forecast';
 import { Loader, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -25,12 +26,19 @@ const initialState: FormState = {
   success: false,
 };
 
+// This new type will hold the data for the main display card
+type DisplayWeather = Omit<CurrentWeather, 'dt'> & { dt: number | string };
+
 export default function Home() {
   const [state, formAction] = useActionState(getWeather, initialState);
   const { toast } = useToast();
   const { t } = useTranslation();
 
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [displayData, setDisplayData] = useState<DisplayWeather | null>(null);
+  const [hourlyData, setHourlyData] = useState<HourlyForecast[]>([]);
+  const [selectedDayId, setSelectedDayId] = useState<string | null>('today');
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -58,6 +66,37 @@ export default function Home() {
     }
   }, []);
 
+  const handleDaySelect = (day: DailyForecast) => {
+    if (!weatherData) return;
+    
+    // Construct the display data from the selected forecast day
+    const newDisplayData: DisplayWeather = {
+      location: weatherData.current.location, // Location stays the same
+      dt: day.dt,
+      main: day.main,
+      description: day.description,
+      temp: day.temp,
+      feels_like: day.feels_like,
+      humidity: day.humidity,
+      wind_speed: day.wind_speed,
+      pop: day.pop,
+    };
+    
+    setDisplayData(newDisplayData);
+    setHourlyData(day.hourly);
+    setSelectedDayId(day.dt);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  const handleShowToday = () => {
+    if (weatherData) {
+      setDisplayData(weatherData.current);
+      setHourlyData(weatherData.hourly);
+      setSelectedDayId('today');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
   useEffect(() => {
     if (isInitialFetchDone.current) return;
     isInitialFetchDone.current = true;
@@ -81,6 +120,9 @@ export default function Home() {
   useEffect(() => {
     if (state.success && state.weatherData) {
       setWeatherData(state.weatherData);
+      setDisplayData(state.weatherData.current);
+      setHourlyData(state.weatherData.hourly);
+      setSelectedDayId('today');
       setError(null);
       setIsLoading(false);
     } else if (!state.success && state.message) {
@@ -106,7 +148,7 @@ export default function Home() {
           <input type="hidden" name="longitude" />
           <input type="hidden" name="location" />
       </form>
-      <main className="flex-grow px-4 py-8">
+      <main className="flex-grow px-4 py-2">
         <div className="flex justify-center items-start h-full">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center text-foreground/80 gap-4 mt-20">
@@ -121,13 +163,18 @@ export default function Home() {
                   <p>{t(error)}</p>
                 </div>
               </GlassCard>
-          ) : weatherData ? (
-            <div key={weatherData.current.location} className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
+          ) : weatherData && displayData ? (
+            <div key={displayData.location + displayData.dt} className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
               <div className="lg:col-span-3">
-                <CurrentWeather data={weatherData.current} />
+                <CurrentWeatherComponent data={displayData as CurrentWeather} hourlyData={hourlyData} />
               </div>
               <div className="lg:col-span-3">
-                <Forecast data={weatherData.forecast} />
+                <Forecast 
+                  data={weatherData.forecast} 
+                  onDaySelect={handleDaySelect} 
+                  onShowToday={handleShowToday}
+                  selectedDayId={selectedDayId}
+                />
               </div>
             </div>
           ) : null}

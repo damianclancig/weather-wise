@@ -1,35 +1,56 @@
+
 'use server';
 
-import type { WeatherData, OWMCurrentWeather, OWMForecast, DailyForecast, CitySuggestion } from "@/lib/types";
+import type { WeatherData, OWMCurrentWeather, OWMForecast, DailyForecast, HourlyForecast, CitySuggestion, OWMForecastItem } from "@/lib/types";
 
-type FormState = {
-  message: string;
-  weatherData?: WeatherData;
-  success: boolean;
+
+const processHourlyForecast = (hourlyItems: OWMForecastItem[], timezoneOffset: number): HourlyForecast[] => {
+  return hourlyItems.map(item => {
+    const localTime = new Date((item.dt * 1000) + timezoneOffset);
+    
+    const time = localTime.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC'
+    });
+    
+    return {
+      time: time,
+      temp: Math.round(item.main.temp),
+      main: item.weather[0].main,
+      pop: item.pop,
+    };
+  });
 };
 
 // Helper function to process and structure forecast data
 const processForecast = (forecastData: OWMForecast): DailyForecast[] => {
-  const dailyData: { [key: string]: any[] } = {};
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const dailyData: { [key: string]: OWMForecastItem[] } = {};
+  const timezoneOffset = forecastData.city.timezone * 1000;
 
+  // Group forecast items by date
   forecastData.list.forEach(item => {
-    const itemDate = new Date(item.dt * 1000);
-    const date = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).toISOString().split('T')[0];
-    
-    // Only include dates after today
-    if (new Date(date) > today) {
-        if (!dailyData[date]) {
-          dailyData[date] = [];
-        }
-        dailyData[date].push(item);
+    const date = new Date((item.dt * 1000) + timezoneOffset).toISOString().split('T')[0];
+    if (!dailyData[date]) {
+      dailyData[date] = [];
     }
+    dailyData[date].push(item);
   });
+  
+  let sortedDays = Object.keys(dailyData).sort();
+  
+  // The first day in the list is always the current day, so we remove it to start from tomorrow.
+  if (sortedDays.length > 1) {
+    sortedDays.shift();
+  }
 
-  const forecast: DailyForecast[] = Object.keys(dailyData).slice(0, 5).map(date => {
+  // We take the next 5 days for the forecast.
+  const aggregatedForecast: DailyForecast[] = sortedDays.slice(0, 5).map(date => {
     const dayItems = dailyData[date];
     const weather = dayItems[0].weather[0];
+
+    // For the main display, let's use the data from around midday if available
+    const representativeItem = dayItems.find(i => new Date(i.dt * 1000).getUTCHours() >= 12) || dayItems[0];
 
     return {
       dt: date,
@@ -38,14 +59,21 @@ const processForecast = (forecastData: OWMForecast): DailyForecast[] => {
       main: weather.main,
       description: weather.description,
       pop: dayItems.reduce((acc, i) => Math.max(acc, i.pop), 0),
+      hourly: processHourlyForecast(dayItems, timezoneOffset),
+      // Add aggregated data for when this day is selected
+      humidity: Math.round(dayItems.reduce((acc, i) => acc + i.main.humidity, 0) / dayItems.length),
+      wind_speed: Math.round(dayItems.reduce((acc, i) => acc + i.wind.speed, 0) / dayItems.length * 3.6),
+      temp: Math.round(representativeItem.main.temp),
+      feels_like: Math.round(representativeItem.main.feels_like),
     };
   });
-
-  return forecast;
+  
+  return aggregatedForecast;
 };
 
+
 // This function now fetches data from the OpenWeatherMap API.
-export async function getWeather(prevState: FormState, formData: FormData): Promise<FormState> {
+export async function getWeather(prevState: any, formData: FormData): Promise<any> {
   const location = formData.get('location') as string;
   const latitude = formData.get('latitude') as string;
   const longitude = formData.get('longitude') as string;
@@ -90,6 +118,7 @@ export async function getWeather(prevState: FormState, formData: FormData): Prom
 
     const currentWeatherData: OWMCurrentWeather = await currentWeatherResponse.json();
     const forecastData: OWMForecast = await forecastResponse.json();
+    const timezoneOffset = forecastData.city.timezone * 1000;
 
     const weatherData: WeatherData = {
       current: {
@@ -101,8 +130,10 @@ export async function getWeather(prevState: FormState, formData: FormData): Prom
         description: currentWeatherData.weather[0].description,
         main: currentWeatherData.weather[0].main,
         pop: forecastData.list[0]?.pop ?? 0,
+        dt: currentWeatherData.dt * 1000,
       },
       forecast: processForecast(forecastData),
+      hourly: processHourlyForecast(forecastData.list.slice(0, 8), timezoneOffset),
     };
 
     return { ...prevState, success: true, weatherData, message: '' };
