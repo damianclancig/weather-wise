@@ -7,113 +7,97 @@ export interface CurrentWeather {
   humidity: number;
   wind_speed: number;
   description: string;
-  main: 'Clear' | 'Clouds' | 'Rain' | 'Snow' | 'Wind' | 'Mist' | 'Drizzle' | 'Thunderstorm' | string;
-  pop: number;
-  dt: number; // We add dt to be able to show the date in the card
+  main: string;
+  pop: number; // Probability of precipitation
+  dt: string; // ISO Date String
   temp_min: number;
   temp_max: number;
-  sunrise: number;
-  sunset: number;
-  timezone: number;
+  sunrise: string; // ISO 8601 Date string
+  sunset: string; // ISO 8601 Date string
+  timezone: string; // e.g., 'Europe/Berlin'
+  weatherCode: number;
 }
 
 export interface DailyForecast {
-  dt: string;
+  dt: string; // Date string 'YYYY-MM-DD'
   temp_min: number;
   temp_max: number;
-  main: 'Clear' | 'Clouds' | 'Rain' | 'Snow' | 'Wind' | 'Mist' | 'Drizzle' | 'Thunderstorm' | string;
+  main: string;
   description: string;
   pop: number;
-  // We'll store the hourly breakdown for each day here
   hourly: HourlyForecast[]; 
-  // We also need some aggregated data for the main card display
   humidity: number;
   wind_speed: number;
   temp: number;
   feels_like: number;
+  weatherCode: number;
+  sunrise: string; // ISO 8601 Date string
+  sunset: string; // ISO 8601 Date string
 }
 
 export interface HourlyForecast {
-  time: string;
+  time: string; // ISO 8601 Date String
   temp: number;
-  main: 'Clear' | 'Clouds' | 'Rain' | 'Snow' | 'Wind' | 'Mist' | 'Drizzle' | 'Thunderstorm' | string;
-  pop: number;
+  main: string;
+  pop: number; // Probability of precipitation
+  weatherCode: number;
 }
-
 
 export interface WeatherData {
   current: CurrentWeather;
   forecast: DailyForecast[];
-  // The top-level hourly is now just for the current day
   hourly: HourlyForecast[];
 }
 
 export interface CitySuggestion {
-    name: string;
-    lat: number;
-    lon: number;
-}
-
-
-// Types for the OpenWeatherMap API response
-export interface OWMCurrentWeather {
-  coord: { lon: number; lat: number };
-  weather: { id: number; main: string; description: string; icon: string }[];
-  base: string;
-  main: {
-    temp: number;
-    feels_like: number;
-    temp_min: number;
-    temp_max: number;
-    pressure: number;
-    humidity: number;
-  };
-  visibility: number;
-  wind: { speed: number; deg: number };
-  clouds: { all: number };
-  dt: number;
-  sys: { type: number; id: number; country: string; sunrise: number; sunset: number };
-  timezone: number;
-  id: number;
   name: string;
-  cod: number;
+  lat: number;
+  lon: number;
 }
 
-export interface OWMForecastItem {
-    dt: number;
-    main: {
-      temp: number;
-      feels_like: number;
-      temp_min: number;
-      temp_max: number;
-      pressure: number;
-      sea_level: number;
-      grnd_level: number;
-      humidity: number;
-      temp_kf: number;
-    };
-    weather: { id: number; main: string; description: string; icon: string }[];
-    clouds: { all: number };
-    wind: { speed: number; deg: number; gust: number };
-    visibility: number;
-    pop: number;
-    sys: { pod: 'd' | 'n' };
-    dt_txt: string;
+// WMO Weather code translation structure
+export interface WeatherCodeInfo {
+  description: string;
+  image: string;
 }
 
-export interface OWMForecast {
-  cod: string;
-  message: number;
-  cnt: number;
-  list: OWMForecastItem[];
-  city: {
-    id: number;
-    name: string;
-    coord: { lat: number; lon: number };
-    country: string;
-    population: number;
-    timezone: number;
-    sunrise: number;
-    sunset: number;
-  };
+// Types for Open-Meteo API
+export interface OpenMeteoCurrent {
+  time: string;
+  temperature_2m: number;
+  relative_humidity_2m: number;
+  apparent_temperature: number;
+  is_day: number;
+  weather_code: number;
+  wind_speed_10m: number;
+}
+
+export interface OpenMeteoHourly {
+  time: string[];
+  temperature_2m: number[];
+  precipitation_probability: number[];
+  weather_code: number[];
+}
+
+export interface OpenMeteoDaily {
+  time: string[];
+  weather_code: number[];
+  temperature_2m_max: number[];
+  temperature_2m_min: number[];
+  sunrise: string[];
+  sunset: string[];
+  precipitation_probability_max: number[];
+}
+
+export interface OpenMeteoWeatherData {
+  latitude: number;
+  longitude: number;
+  generationtime_ms: number;
+  utc_offset_seconds: number;
+  timezone: string;
+  timezone_abbreviation: string;
+  elevation: number;
+  current: OpenMeteoCurrent;
+  hourly: OpenMeteoHourly;
+  daily: OpenMeteoDaily;
 }

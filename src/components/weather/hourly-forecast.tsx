@@ -1,35 +1,106 @@
+
 'use client';
 
 import type { HourlyForecast as HourlyForecastType } from '@/lib/types';
 import { useTranslation } from '@/hooks/use-translation';
 import { AnimatedWeatherIcon } from '@/components/icons/animated-weather-icon';
-import { Umbrella } from 'lucide-react';
+import { Umbrella, Sunrise, Sunset } from 'lucide-react';
+
+// New type to include sunrise/sunset events
+type TimelineEvent = 
+  | ({ type: 'hour' } & HourlyForecastType & { dt: number; time: string })
+  | { type: 'sunrise' | 'sunset'; time: string; dt: number };
 
 interface HourlyForecastProps {
   data: HourlyForecastType[];
+  sunrise?: string;
+  sunset?: string;
+  timezone?: string; // IANA timezone string e.g. "Europe/Berlin"
 }
 
-export function HourlyForecast({ data }: HourlyForecastProps) {
+const formatTime = (date: Date, timezone: string) => {
+    return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: timezone,
+        hour12: false,
+    });
+};
+
+export function HourlyForecast({ data, sunrise, sunset, timezone }: HourlyForecastProps) {
   const { t } = useTranslation();
 
-  if (!data || data.length === 0) {
+  if (!data || data.length === 0 || !timezone) {
     return null;
   }
+  
+  // Create timeline events from hourly data
+  const timelineEvents: TimelineEvent[] = data.map(hour => {
+    const eventDate = new Date(hour.time);
+    return {
+      ...hour,
+      type: 'hour',
+      dt: eventDate.getTime(),
+      time: formatTime(eventDate, timezone)
+    };
+  });
+  
+  const sunriseDate = sunrise ? new Date(sunrise) : null;
+  const sunsetDate = sunset ? new Date(sunset) : null;
 
+  if (sunriseDate) {
+    timelineEvents.push({ type: 'sunrise', time: formatTime(sunriseDate, timezone), dt: sunriseDate.getTime() });
+  }
+  if (sunsetDate) {
+    timelineEvents.push({ type: 'sunset', time: formatTime(sunsetDate, timezone), dt: sunsetDate.getTime() });
+  }
+
+  // Sort all events chronologically
+  timelineEvents.sort((a, b) => a.dt - b.dt);
+  
   return (
     <div className="overflow-x-auto pb-2 -mb-2">
       <div className="flex space-x-4">
-        {data.map((hour, index) => (
-          <div key={index} className="flex flex-col items-center p-2 rounded-lg bg-white/5 gap-1 min-w-[60px]">
-            <p className="font-semibold text-foreground/80 text-sm">{hour.time}</p>
-            <AnimatedWeatherIcon condition={hour.main} className="w-10 h-10" />
-            <p className="font-bold">{hour.temp}°</p>
-            <div className="flex items-center gap-1 text-foreground/80" title={t('precipitation')}>
-              <Umbrella className="w-3 h-3" />
-              <span className="text-xs font-medium">{Math.round(hour.pop * 100)}%</span>
+        {timelineEvents.map((item, index) => {
+          
+          let isNight = false;
+          if (item.type === 'hour' && sunriseDate && sunsetDate) {
+             isNight = item.dt < sunriseDate.getTime() || item.dt > sunsetDate.getTime();
+          }
+
+          return (
+            <div key={index} className="flex flex-col items-center p-2 rounded-lg bg-white/5 gap-1 min-w-[70px]">
+              <p className="font-semibold text-foreground/80 text-sm">{item.time}</p>
+              
+              {item.type === 'hour' && (
+                <>
+                  <AnimatedWeatherIcon code={item.weatherCode} className="w-10 h-10" isNight={isNight} />
+                  <p className="font-bold">{item.temp}°</p>
+                  <div className="flex items-center gap-1 text-foreground/80" title={t('precipitation')}>
+                    <Umbrella className="w-3 h-3" />
+                    <span className="text-xs font-medium">{Math.round(item.pop)}%</span>
+                  </div>
+                </>
+              )}
+
+              {item.type === 'sunrise' && (
+                <>
+                  <Sunrise className="w-10 h-10 text-yellow-400" />
+                  <p className="font-bold text-xs capitalize">{t('sunrise') || 'Sunrise'}</p>
+                   <div className="h-[22px]" />
+                </>
+              )}
+
+              {item.type === 'sunset' && (
+                <>
+                  <Sunset className="w-10 h-10 text-orange-400" />
+                  <p className="font-bold text-xs capitalize">{t('sunset') || 'Sunset'}</p>
+                   <div className="h-[22px]" />
+                </>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   );

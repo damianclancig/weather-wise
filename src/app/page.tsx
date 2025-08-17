@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useActionState, useRef } from 'react';
 
 import type { WeatherData, DailyForecast, CurrentWeather, HourlyForecast } from '@/lib/types';
-import { getWeather } from '@/app/actions';
+import { getWeather, getCityName } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -14,6 +14,7 @@ import { CurrentWeather as CurrentWeatherComponent } from '@/components/weather/
 import { Forecast } from '@/components/weather/forecast';
 import { Loader, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
+import { MoonCalendar } from '@/components/weather/moon-calendar';
 
 type FormState = {
   message: string;
@@ -45,7 +46,7 @@ export default function Home() {
   const initialFetchFormRef = useRef<HTMLFormElement>(null);
   const isInitialFetchDone = useRef(false);
 
-  const submitInitialForm = useCallback((lat?: number, lon?: number) => {
+  const submitInitialForm = useCallback((lat?: number, lon?: number, loc?: string) => {
     if (initialFetchFormRef.current) {
         const form = initialFetchFormRef.current;
         const latInput = form.elements.namedItem('latitude') as HTMLInputElement;
@@ -55,10 +56,11 @@ export default function Home() {
         if (lat && lon) {
           if (latInput) latInput.value = lat.toString();
           if (lonInput) lonInput.value = lon.toString();
-          if (locInput) locInput.value = '';
+          if (locInput && loc) locInput.value = loc;
         } else {
-          if (latInput) latInput.value = '';
-          if (lonInput) lonInput.value = '';
+          // Fallback to a default location if geolocation fails
+          if (latInput) latInput.value = '40.71';
+          if (lonInput) lonInput.value = '-74.01';
           if (locInput) locInput.value = 'New York';
         }
         
@@ -73,6 +75,7 @@ export default function Home() {
     const newDisplayData: DisplayWeather = {
       ...day,
       location: weatherData.current.location, // Location stays the same
+      timezone: weatherData.current.timezone,
     };
     
     setDisplayData(newDisplayData);
@@ -95,8 +98,10 @@ export default function Home() {
     isInitialFetchDone.current = true;
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        submitInitialForm(position.coords.latitude, position.coords.longitude);
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const cityName = await getCityName(latitude, longitude);
+        submitInitialForm(latitude, longitude, cityName);
       },
       () => {
         toast({
@@ -104,6 +109,7 @@ export default function Home() {
           title: t('errorTitle'),
           description: t('geolocationError'),
         })
+        // Fallback if user denies geolocation
         submitInitialForm();
       }
     );
@@ -126,7 +132,7 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: t('errorTitle'),
-        description: t(state.message),
+        description: t(state.message === 'fetchError' ? 'fetchError' : 'geolocationError'),
       })
       setIsLoading(false);
     }
@@ -169,6 +175,11 @@ export default function Home() {
                   selectedDayId={selectedDayId}
                 />
               </div>
+              {weatherData.current.dt && typeof weatherData.current.dt === 'string' && (
+                <div className="lg:col-span-3">
+                  <MoonCalendar date={new Date(weatherData.current.dt)} />
+                </div>
+              )}
             </div>
           ) : null}
         </div>

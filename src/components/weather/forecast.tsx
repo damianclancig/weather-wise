@@ -65,11 +65,11 @@ export function Forecast({ data, onDaySelect, onShowToday, selectedDayId }: Fore
               )}
             >
               <p className="font-semibold text-foreground/80">{dayName} {dayNumber}</p>
-              <AnimatedWeatherIcon condition={day.main} className="w-16 h-16" />
+              <AnimatedWeatherIcon code={day.weatherCode} className="w-16 h-16" />
               <p className="font-bold">{Math.round(day.temp_max)}° / {Math.round(day.temp_min)}°</p>
               <div className="flex items-center gap-1.5 text-foreground/80" title={t('precipitation')}>
                 <Umbrella className="w-4 h-4" />
-                <span className="text-sm font-medium">{Math.round(day.pop * 100)}%</span>
+                <span className="text-sm font-medium">{Math.round(day.pop)}%</span>
               </div>
             </button>
           )

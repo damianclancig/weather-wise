@@ -1,152 +1,198 @@
 
 'use server';
 
-import type { WeatherData, OWMCurrentWeather, OWMForecast, DailyForecast, HourlyForecast, CitySuggestion, OWMForecastItem } from "@/lib/types";
+import type { WeatherData, DailyForecast, HourlyForecast, CitySuggestion, OpenMeteoWeatherData, OpenMeteoDaily, OpenMeteoHourly, OpenMeteoCurrent, WeatherCodeInfo } from "@/lib/types";
+import { weatherCodes } from "@/lib/weather-codes";
 
+const getWeatherDescriptionFromCode = (code: number, isDay: boolean = true): string => {
+  const codeInfo: WeatherCodeInfo = weatherCodes[code] || weatherCodes[0];
+  const descriptionKey = codeInfo.description.replace(/\s+/g, '_').toLowerCase();
+  return descriptionKey;
+};
 
-const processHourlyForecast = (hourlyItems: OWMForecastItem[], timezoneOffset: number): HourlyForecast[] => {
-  return hourlyItems.map(item => {
-    const localTime = new Date((item.dt * 1000) + timezoneOffset);
+const getMainWeatherFromCode = (code: number): string => {
+  if ([0, 1].includes(code)) return 'Clear';
+  if ([2, 3].includes(code)) return 'Clouds';
+  if ([45, 48].includes(code)) return 'Fog';
+  if (code >= 51 && code <= 67) return 'Rain';
+  if (code >= 71 && code <= 77) return 'Snow';
+  if (code >= 80 && code <= 82) return 'Rain';
+  if (code >= 95 && code <= 99) return 'Thunderstorm';
+  return 'Clear';
+}
+
+const getDominantWeatherCode = (hourlyCodes: number[]): number => {
+    if (!hourlyCodes || hourlyCodes.length === 0) return 0;
+
+    // We only care about daytime weather for the daily summary icon (e.g. 7am to 7pm)
+    const daytimeCodes = hourlyCodes.slice(7, 19);
+
+    if (daytimeCodes.length === 0) {
+        return hourlyCodes[Math.floor(hourlyCodes.length / 2)] || 0;
+    }
     
-    const time = localTime.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'UTC'
-    });
+    const codeCounts = daytimeCodes.reduce((acc, code) => {
+        acc[code] = (acc[code] || 0) + 1;
+        return acc;
+    }, {} as Record<number, number>);
+
+    // Find the most frequent code
+    const dominantCode = Object.entries(codeCounts).reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+
+    return parseInt(dominantCode, 10);
+};
+
+const processHourlyForecast = (hourlyData: OpenMeteoHourly, dayIndex: number): HourlyForecast[] => {
+  const startIndex = dayIndex * 24;
+  const endIndex = startIndex + 24;
+
+  if (startIndex >= hourlyData.time.length) return [];
+
+  return hourlyData.time.slice(startIndex, endIndex).map((timeISO, i) => {
+    const index = startIndex + i;
+    const code = hourlyData.weather_code[index];
     
     return {
-      time: time,
-      temp: Math.round(item.main.temp),
-      main: item.weather[0].main,
-      pop: item.pop,
+      time: timeISO,
+      temp: Math.round(hourlyData.temperature_2m[index]),
+      main: getMainWeatherFromCode(code),
+      pop: hourlyData.precipitation_probability[index],
+      weatherCode: code,
     };
   });
 };
 
-// Helper function to process and structure forecast data
-const processForecast = (forecastData: OWMForecast): { daily: DailyForecast[], todayTemps: { min: number, max: number } } => {
-  const dailyData: { [key: string]: OWMForecastItem[] } = {};
-  const timezoneOffset = forecastData.city.timezone * 1000;
-
-  // Group forecast items by date
-  forecastData.list.forEach(item => {
-    const date = new Date((item.dt * 1000) + timezoneOffset).toISOString().split('T')[0];
-    if (!dailyData[date]) {
-      dailyData[date] = [];
-    }
-    dailyData[date].push(item);
-  });
+const processForecast = (weatherAPIData: OpenMeteoWeatherData): { daily: DailyForecast[], todayTemps: { min: number, max: number } } => {
+  const { daily, hourly } = weatherAPIData;
   
-  let sortedDays = Object.keys(dailyData).sort();
-
-  // Get today's min/max temps from the first day in the forecast list
-  const todayItems = dailyData[sortedDays[0]] || [];
   const todayTemps = {
-    min: Math.min(...todayItems.map(i => i.main.temp_min)),
-    max: Math.max(...todayItems.map(i => i.main.temp_max)),
-  }
-  
-  // The first day in the list is always the current day, so we remove it to start from tomorrow.
-  if (sortedDays.length > 1) {
-    sortedDays.shift();
-  }
+    min: daily.temperature_2m_min[0],
+    max: daily.temperature_2m_max[0],
+  };
 
-  // We take the next 5 days for the forecast.
-  const aggregatedForecast: DailyForecast[] = sortedDays.slice(0, 5).map(date => {
-    const dayItems = dailyData[date];
-    const weather = dayItems[0].weather[0];
-
-    // For the main display, let's use the data from around midday if available
-    const representativeItem = dayItems.find(i => new Date(i.dt * 1000).getUTCHours() >= 12) || dayItems[0];
+  const aggregatedForecast: DailyForecast[] = daily.time.slice(1, 7).map((date, i) => {
+    const dayIndex = i + 1;
+    const hourlyCodesForDay = hourly.weather_code.slice(dayIndex * 24, (dayIndex + 1) * 24);
+    const dominantCode = getDominantWeatherCode(hourlyCodesForDay);
     
     return {
       dt: date,
-      temp_min: Math.min(...dayItems.map(i => i.main.temp_min)),
-      temp_max: Math.max(...dayItems.map(i => i.main.temp_max)),
-      main: weather.main,
-      description: weather.description,
-      pop: dayItems.reduce((acc, i) => Math.max(acc, i.pop), 0),
-      hourly: processHourlyForecast(dayItems, timezoneOffset),
-      // Add aggregated data for when this day is selected
-      humidity: Math.round(dayItems.reduce((acc, i) => acc + i.main.humidity, 0) / dayItems.length),
-      wind_speed: Math.round(dayItems.reduce((acc, i) => acc + i.wind.speed, 0) / dayItems.length * 3.6),
-      temp: Math.round(representativeItem.main.temp),
-      feels_like: Math.round(representativeItem.main.feels_like),
+      temp_min: Math.round(daily.temperature_2m_min[dayIndex]),
+      temp_max: Math.round(daily.temperature_2m_max[dayIndex]),
+      main: getMainWeatherFromCode(dominantCode),
+      description: getWeatherDescriptionFromCode(dominantCode),
+      pop: daily.precipitation_probability_max[dayIndex],
+      hourly: processHourlyForecast(hourly, dayIndex),
+      humidity: 0, // Open-Meteo provides hourly humidity, not daily aggregate. Could be calculated.
+      wind_speed: 0, // Open-Meteo provides hourly wind, not daily aggregate.
+      temp: Math.round((daily.temperature_2m_max[dayIndex] + daily.temperature_2m_min[dayIndex]) / 2),
+      feels_like: Math.round((daily.temperature_2m_max[dayIndex] + daily.temperature_2m_min[dayIndex]) / 2), // Open-Meteo doesn't provide daily feels_like
+      weatherCode: dominantCode,
+      sunrise: daily.sunrise[dayIndex],
+      sunset: daily.sunset[dayIndex],
     };
   });
-  
+
   return { daily: aggregatedForecast, todayTemps };
 };
 
+export async function getCityFromCoords(lat: number, lon: number): Promise<string> {
+  const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+  try {
+    const response = await fetch(geoUrl);
+    if (!response.ok) return "Current Location";
+    const data = await response.json();
+    return `${data.city}, ${data.countryCode}`;
+  } catch (error) {
+    return "Current Location";
+  }
+}
 
-// This function now fetches data from the OpenWeatherMap API.
+// This function now fetches data from the Open-Meteo API.
 export async function getWeather(prevState: any, formData: FormData): Promise<any> {
-  const location = formData.get('location') as string;
-  const latitude = formData.get('latitude') as string;
-  const longitude = formData.get('longitude') as string;
+  const locationName = formData.get('location') as string;
+  let latitude = formData.get('latitude') as string;
+  let longitude = formData.get('longitude') as string;
+
+  if (!locationName && !(latitude && longitude)) {
+    return { ...prevState, success: false, message: 'noLocationProvided' };
+  }
   
-  const apiKey = process.env.OPENWEATHER_API_KEY;
+  let lat = latitude;
+  let lon = longitude;
+  let loc = locationName;
 
-  if (!apiKey) {
-    console.error("OpenWeatherMap API key is missing.");
-    return { ...prevState, success: false, message: 'fetchError' };
+  // If we only have a name, geocode it first.
+  if (locationName && (!latitude || !longitude)) {
+      const suggestions = await getCitySuggestions(locationName);
+      if (suggestions.length > 0) {
+          lat = suggestions[0].lat.toString();
+          lon = suggestions[0].lon.toString();
+          loc = suggestions[0].name;
+      } else {
+          return { ...prevState, success: false, message: 'fetchError' };
+      }
+  } else if (latitude && longitude && !locationName) {
+      loc = await getCityFromCoords(parseFloat(latitude), parseFloat(longitude));
   }
 
-  if (!location && !(latitude && longitude)) {
-    return { ...prevState, success: false, message: 'noLocationProvided' };
-  }
-
-  let currentWeatherUrl = '';
-  let forecastUrl = '';
-
-  if (latitude && longitude) {
-    currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`;
-    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`;
-  } else if (location) {
-    currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${apiKey}&units=metric`;
-    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${location}&appid=${apiKey}&units=metric`;
-  }
-
-  if (!currentWeatherUrl || !forecastUrl) {
-    return { ...prevState, success: false, message: 'noLocationProvided' };
-  }
+  const weatherParams = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m",
+    hourly: "temperature_2m,precipitation_probability,weather_code",
+    daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max",
+    timezone: "auto",
+  });
+  
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?${weatherParams}`;
 
   try {
-    const [currentWeatherResponse, forecastResponse] = await Promise.all([
-      fetch(currentWeatherUrl),
-      fetch(forecastUrl),
-    ]);
+    const weatherResponse = await fetch(weatherUrl, { next: { revalidate: 0 } });
 
-    if (!currentWeatherResponse.ok || !forecastResponse.ok) {
-      const errorData = !currentWeatherResponse.ok ? await currentWeatherResponse.json() : await forecastResponse.json();
-      console.error("API Error:", errorData.message);
+    if (!weatherResponse.ok) {
+      const errorData = await weatherResponse.json();
+      console.error("API Error:", errorData.reason);
       return { ...prevState, success: false, message: 'fetchError' };
     }
 
-    const currentWeatherData: OWMCurrentWeather = await currentWeatherResponse.json();
-    const forecastData: OWMForecast = await forecastResponse.json();
-    const timezoneOffset = forecastData.city.timezone * 1000;
-    const { daily: processedForecast, todayTemps } = processForecast(forecastData);
+    const weatherAPIData: OpenMeteoWeatherData = await weatherResponse.json();
+    const { daily: processedForecast, todayTemps } = processForecast(weatherAPIData);
+
+    const current: OpenMeteoCurrent = weatherAPIData.current;
+    const isDay = current.is_day === 1;
+
+    // Use hourly data for current pop, find the closest hour
+    const now = new Date();
+    const closestHourIndex = weatherAPIData.hourly.time.findIndex(
+      (timeStr, index) => {
+        const hourDate = new Date(timeStr);
+        return now.getTime() < hourDate.getTime();
+      }
+    );
+    
+    const currentPop = weatherAPIData.hourly.precipitation_probability[closestHourIndex > 0 ? closestHourIndex -1 : 0];
 
     const weatherData: WeatherData = {
       current: {
-        location: `${currentWeatherData.name}, ${currentWeatherData.sys.country}`,
-        temp: currentWeatherData.main.temp,
-        feels_like: currentWeatherData.main.feels_like,
-        humidity: currentWeatherData.main.humidity,
-        wind_speed: currentWeatherData.wind.speed * 3.6, // m/s to kph
-        description: currentWeatherData.weather[0].description,
-        main: currentWeatherData.weather[0].main,
-        pop: forecastData.list[0]?.pop ?? 0,
-        dt: currentWeatherData.dt * 1000,
+        location: loc,
+        temp: current.temperature_2m,
+        feels_like: current.apparent_temperature,
+        humidity: current.relative_humidity_2m,
+        wind_speed: current.wind_speed_10m,
+        description: getWeatherDescriptionFromCode(current.weather_code, isDay),
+        main: getMainWeatherFromCode(current.weather_code),
+        pop: currentPop,
+        dt: new Date().toISOString(),
         temp_min: todayTemps.min,
         temp_max: todayTemps.max,
-        sunrise: currentWeatherData.sys.sunrise * 1000,
-        sunset: currentWeatherData.sys.sunset * 1000,
-        timezone: currentWeatherData.timezone * 1000,
+        sunrise: weatherAPIData.daily.sunrise[0],
+        sunset: weatherAPIData.daily.sunset[0],
+        timezone: weatherAPIData.timezone,
+        weatherCode: current.weather_code,
       },
       forecast: processedForecast,
-      hourly: processHourlyForecast(forecastData.list.slice(0, 8), timezoneOffset),
+      hourly: processHourlyForecast(weatherAPIData.hourly, 0),
     };
 
     return { ...prevState, success: true, weatherData, message: '' };
@@ -157,18 +203,16 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
   }
 }
 
+export async function getCityName(lat: number, lon: number): Promise<string> {
+  return getCityFromCoords(lat, lon);
+}
+
 export async function getCitySuggestions(query: string): Promise<CitySuggestion[]> {
   if (query.length < 3) {
     return [];
   }
 
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey) {
-    console.error("OpenWeatherMap API key is missing.");
-    return [];
-  }
-
-  const url = `http://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`;
 
   try {
     const response = await fetch(url);
@@ -177,17 +221,19 @@ export async function getCitySuggestions(query: string): Promise<CitySuggestion[
     }
     const data = await response.json();
     
+    if (!data.results) return [];
+
     // Map to our CitySuggestion type and remove duplicates
     const suggestions: CitySuggestion[] = [];
     const seen = new Set<string>();
 
-    data.forEach((item: any) => {
+    data.results.forEach((item: any) => {
       const name = `${item.name}, ${item.country}`;
       if (!seen.has(name)) {
         suggestions.push({
           name: name,
-          lat: item.lat,
-          lon: item.lon,
+          lat: item.latitude,
+          lon: item.longitude,
         });
         seen.add(name);
       }

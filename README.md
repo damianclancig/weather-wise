@@ -1,3 +1,4 @@
+
 # WeatherWise - Pronóstico del Tiempo en Tiempo Real
 
 ![Captura de Pantalla de WeatherWise](public/assets/screenshot.png)
@@ -38,7 +39,7 @@ Este proyecto está construido con un stack tecnológico moderno y listo para pr
 
 ## 🔌 APIs
 
-- **[API de OpenWeatherMap](https://openweathermap.org/api):** Utilizada para obtener datos del tiempo actual y pronósticos a 5 días.
+- **[API de Open-Meteo](https://open-meteo.com/):** Utilizada para obtener datos del tiempo actual y pronósticos a 5 días. ¡Es gratuita y no requiere API Key!
 
 ---
 
@@ -65,10 +66,9 @@ Sigue estas instrucciones para obtener una copia local del proyecto y ponerla en
     ```
 
 3.  **Configura las variables de entorno:**
-    Crea un archivo llamado `.env.local` en la raíz de tu proyecto y añade tu clave de API de OpenWeatherMap. Puedes obtener una clave de API gratuita en su [sitio web](https://home.openweathermap.org/users/sign_up).
+    Crea un archivo llamado `.env.local` en la raíz de tu proyecto.
 
     ```.env.local
-    OPENWEATHER_API_KEY=tu_api_key_aqui
     APP_URL=http://localhost:3000
     ```
 

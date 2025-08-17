@@ -10,7 +10,8 @@ import { Thermometer, Droplets, Wind, MapPin, Umbrella } from 'lucide-react';
 import { SunriseSunset } from './sunrise-sunset';
 import { DetailItem } from './detail-item';
 
-type DisplayWeather = (CurrentWeatherType | DailyForecast) & { dt: number | string };
+
+type DisplayWeather = (CurrentWeatherType | DailyForecast) & { dt: string; weatherCode: number };
 
 interface CurrentWeatherProps {
   data: DisplayWeather;
@@ -22,15 +23,35 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
   
   const weatherDescriptionKey = `weather.${data.description.replace(/\s/g, '_')}`;
 
-  const date = typeof data.dt === 'string' ? new Date(`${data.dt}T12:00:00Z`) : new Date(data.dt);
+  const date = new Date(data.dt);
   
   const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  if (typeof data.dt === 'string') {
+  if ('timezone' in data && data.timezone) {
+      dateOptions.timeZone = data.timezone;
+  } else if (typeof data.dt === 'string') {
+      // For forecast days, the date string is 'YYYY-MM-DD', which JS parses as UTC.
+      // To display it correctly in the user's local timezone (or any timezone), it's best to be explicit.
+      // However, for this app, treating it as a simple date without timezone shifting is intended.
+      // We force UTC here to prevent the date from shifting to the previous day depending on the user's timezone.
       dateOptions.timeZone = 'UTC';
   }
 
   // Get temp from CurrentWeather or DailyForecast
   const temp = 'temp' in data ? data.temp : 0;
+  
+  const hasSunData = 'sunrise' in data && data.sunrise && 'sunset' in data && data.sunset && 'timezone' in data;
+  
+  let isNight = false;
+  if (hasSunData) {
+    const sunriseTimestamp = new Date(data.sunrise).getTime();
+    const sunsetTimestamp = new Date(data.sunset).getTime();
+    
+    // For forecast days, the DT is 'YYYY-MM-DD', which JS parses as UTC midnight.
+    // For current weather, the DT is a full ISO string.
+    const nowTimestamp = new Date(data.dt).getTime();
+
+    isNight = nowTimestamp < sunriseTimestamp || nowTimestamp > sunsetTimestamp;
+  }
 
   return (
     <GlassCard>
@@ -39,9 +60,9 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
         <div className="flex flex-col items-center text-center md:items-start md:text-left w-full">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-foreground/80" />
-            <h2 className="text-2xl md:text-3xl font-bold">{data.location}</h2>
+            <h2 className="text-xl md:text-2xl font-bold">{data.location}</h2>
           </div>
-          <p className="text-sm text-foreground/80">{date.toLocaleDateString(undefined, dateOptions)}</p>
+          <p className="text-sm text-foreground/80">{new Intl.DateTimeFormat(undefined, dateOptions).format(date)}</p>
         </div>
       </div>
       
@@ -55,12 +76,16 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
                 Máx: {Math.round(data.temp_max)}° / Mín: {Math.round(data.temp_min)}°
               </div>
             </div>
-            <AnimatedWeatherIcon condition={data.main} className="w-24 h-24 md:w-32 md:h-32" />
+            <AnimatedWeatherIcon
+              code={data.weatherCode}
+              className="w-24 h-24 md:w-32 md:h-32"
+              isNight={isNight}
+            />
         </div>
       </div>
       
        {/* Sunrise and Sunset */}
-      {'sunrise' in data && data.sunrise && 'sunset' in data && data.sunset && 'timezone' in data && data.timezone && (
+      {hasSunData && (
         <div className="my-2">
           <SunriseSunset
             sunrise={data.sunrise}
@@ -71,7 +96,7 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
       )}
 
       {/* Details Grid */}
-      <div className="grid grid-cols-4 gap-1 text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-center">
         <DetailItem
           icon={Thermometer}
           label={t('feelsLike')}
@@ -82,21 +107,26 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
           label={t('humidity')}
           value={`${data.humidity}%`}
         />
+         <DetailItem
+          icon={Wind}
+          label={t('wind')}
+          value={`${Math.round(data.wind_speed)} km/h`}
+        />
         <DetailItem
           icon={Umbrella}
           label={t('precipitation')}
-          value={`${Math.round(data.pop * 100)}%`}
-        />
-        <DetailItem
-          icon={Wind}
-          label={t('wind')}
-          value={`${Math.round(data.wind_speed)} kph`}
+          value={`${Math.round(data.pop)}%`}
         />
       </div>
 
       {/* Hourly Forecast */}
       <div className="pb-4 pt-2">
-        <HourlyForecast data={hourlyData} />
+        <HourlyForecast 
+          data={hourlyData} 
+          sunrise={hasSunData ? data.sunrise : undefined}
+          sunset={hasSunData ? data.sunset : undefined}
+          timezone={hasSunData ? data.timezone : undefined}
+        />
       </div>
     </GlassCard>
   );

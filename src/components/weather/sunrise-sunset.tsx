@@ -5,17 +5,17 @@ import { useEffect, useState } from 'react';
 import { Sun, Sunrise, Sunset, Clock } from 'lucide-react';
 
 interface SunriseSunsetProps {
-  sunrise: number;
-  sunset: number;
-  timezone: number; // timezone offset in milliseconds
+  sunrise: string; // ISO 8601 string
+  sunset: string; // ISO 8601 string
+  timezone: string; // IANA timezone string e.g. "Europe/Berlin"
 }
 
-const formatTime = (timestamp: number, timezone: number) => {
-    const date = new Date(timestamp + timezone);
-    return date.toLocaleTimeString('en-GB', {
+const formatTime = (date: Date, timezone: string) => {
+    return date.toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
-        timeZone: 'UTC'
+        timeZone: timezone,
+        hour12: false,
     });
 };
 
@@ -25,26 +25,33 @@ const formatDuration = (durationMs: number) => {
     return `${hours}h ${minutes}m`;
 }
 
-export function SunriseSunset({ sunrise, sunset, timezone }: SunriseSunsetProps) {
+export function SunriseSunset({ sunrise: sunriseStr, sunset: sunsetStr, timezone }: SunriseSunsetProps) {
   const [sunPosition, setSunPosition] = useState(0);
   const [isDay, setIsDay] = useState(false);
 
+  // Convert ISO strings to Date objects
+  const sunriseDate = new Date(sunriseStr);
+  const sunsetDate = new Date(sunsetStr);
+  
+  // Get timestamps
+  const sunrise = sunriseDate.getTime();
+  const sunset = sunsetDate.getTime();
+
   useEffect(() => {
     const calculateSunPosition = () => {
-      const now = new Date();
-      // Get the correct local time for the location by applying the timezone offset
-      const localTime = now.getTime() + (now.getTimezoneOffset() * 60000) + timezone;
+      // Current time in UTC
+      const now = new Date().getTime();
 
-      if (localTime >= sunrise && localTime <= sunset) {
+      if (now >= sunrise && now <= sunset) {
         setIsDay(true);
         const totalDaylight = sunset - sunrise;
-        const timeSinceSunrise = localTime - sunrise;
+        const timeSinceSunrise = now - sunrise;
         const progress = (timeSinceSunrise / totalDaylight) * 100;
         setSunPosition(progress);
       } else {
         setIsDay(false);
         // Position sun at beginning or end if it's night
-        setSunPosition(localTime < sunrise ? -5 : 105); // Move it off-screen
+        setSunPosition(now < sunrise ? -5 : 105); // Move it off-screen
       }
     };
 
@@ -52,7 +59,7 @@ export function SunriseSunset({ sunrise, sunset, timezone }: SunriseSunsetProps)
     const interval = setInterval(calculateSunPosition, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, [sunrise, sunset, timezone]);
+  }, [sunrise, sunset]);
 
   const dayDuration = sunset - sunrise;
 
@@ -77,7 +84,7 @@ export function SunriseSunset({ sunrise, sunset, timezone }: SunriseSunsetProps)
       <div className="w-full flex justify-between items-center mt-2">
         <div className="flex items-center gap-1 text-sm text-foreground/80">
           <Sunrise className="h-4 w-4" />
-          <span>{formatTime(sunrise, timezone)}</span>
+          <span>{formatTime(sunriseDate, timezone)}</span>
         </div>
         <div className="flex items-center gap-1 text-sm text-foreground/80">
           <Clock className="h-4 w-4" />
@@ -85,7 +92,7 @@ export function SunriseSunset({ sunrise, sunset, timezone }: SunriseSunsetProps)
         </div>
         <div className="flex items-center gap-1 text-sm text-foreground/80">
           <Sunset className="h-4 w-4" />
-          <span>{formatTime(sunset, timezone)}</span>
+          <span>{formatTime(sunsetDate, timezone)}</span>
         </div>
       </div>
     </div>
