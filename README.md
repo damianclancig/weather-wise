@@ -16,8 +16,9 @@ La aplicación detecta automáticamente la ubicación del usuario para proporcio
 - **Datos Meteorológicos en Tiempo Real:** Obtén información actualizada al minuto sobre temperatura, sensación térmica, humedad, velocidad del viento y probabilidad de precipitación.
 - **Geolocalización:** Obtiene automáticamente el clima de tu ubicación actual al cargar la página.
 - **Búsqueda de Ciudades con Autocompletado:** Encuentra fácilmente cualquier ciudad del mundo con una barra de búsqueda inteligente que ofrece sugerencias mientras escribes.
-- **Pronóstico a 5 Días:** Planifica con antelación con un pronóstico detallado para los próximos cinco días. Al seleccionar un día, la tarjeta principal se actualiza con la información completa de esa fecha.
+- **Pronóstico a 6 Días:** Planifica con antelación con un pronóstico detallado para los próximos seis días. Al seleccionar un día, la tarjeta principal se actualiza con la información completa de esa fecha.
 - **Pronóstico por Horas:** Visualiza el pronóstico para las próximas horas en un carrusel interactivo dentro de la tarjeta principal.
+- **Fases de la Luna:** Consulta la fase lunar actual y las fechas de las próximas fases principales.
 - **Diseño Receptivo:** Una interfaz totalmente receptiva que se ve genial en computadoras de escritorio, tabletas y dispositivos móviles.
 - **Interfaz de Usuario Dinámica:** Incluye iconos meteorológicos animados y un moderno diseño de "tarjeta de cristal" con bordes iridiscentes.
 - **Soporte Multilingüe:** Interfaz disponible en inglés, español y portugués, que se adapta al idioma del navegador.
@@ -32,14 +33,14 @@ Este proyecto está construido con un stack tecnológico moderno y listo para pr
 - **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
 - **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
 - **Componentes de UI:** [ShadCN UI](https://ui.shadcn.com/)
-- **Lógica de Backend/IA (Opcional):** [Genkit de Google](https://firebase.google.com/docs/genkit)
 - **Iconos:** [Lucide React](https://lucide.dev/guide/packages/lucide-react)
 
 ---
 
 ## 🔌 APIs
 
-- **[API de Open-Meteo](https://open-meteo.com/):** Utilizada para obtener datos del tiempo actual y pronósticos a 5 días. ¡Es gratuita y no requiere API Key!
+- **[API de Open-Meteo](https://open-meteo.com/):** Utilizada para obtener datos del tiempo actual y pronósticos. ¡Es gratuita y no requiere API Key!
+- **[BigDataCloud Reverse Geocoding](https://www.bigdatacloud.com/):** Para obtener el nombre de la ciudad a partir de coordenadas.
 
 ---
 

@@ -23,17 +23,20 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
   
   const weatherDescriptionKey = `weather.${data.description.replace(/\s/g, '_')}`;
 
-  const date = new Date(data.dt);
+  const parseDateString = (dt: string) => {
+    // If it's just a date 'YYYY-MM-DD', replace dashes to avoid UTC parsing issues.
+    // If it's a full ISO string, it can be parsed directly.
+    if (!dt.includes('T')) {
+      return new Date(dt.replace(/-/g, '/'));
+    }
+    return new Date(dt);
+  }
+
+  const date = parseDateString(data.dt);
   
   const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   if ('timezone' in data && data.timezone) {
       dateOptions.timeZone = data.timezone;
-  } else if (typeof data.dt === 'string') {
-      // For forecast days, the date string is 'YYYY-MM-DD', which JS parses as UTC.
-      // To display it correctly in the user's local timezone (or any timezone), it's best to be explicit.
-      // However, for this app, treating it as a simple date without timezone shifting is intended.
-      // We force UTC here to prevent the date from shifting to the previous day depending on the user's timezone.
-      dateOptions.timeZone = 'UTC';
   }
 
   // Get temp from CurrentWeather or DailyForecast

@@ -70,14 +70,14 @@ export default function Home() {
 
   const handleDaySelect = (day: DailyForecast) => {
     if (!weatherData) return;
-    
-    // Construct the display data from the selected forecast day
+  
+    // Create a complete display object exclusively from the selected forecast day.
     const newDisplayData: DisplayWeather = {
       ...day,
-      location: weatherData.current.location, // Location stays the same
+      location: weatherData.current.location,
       timezone: weatherData.current.timezone,
     };
-    
+  
     setDisplayData(newDisplayData);
     setHourlyData(day.hourly);
     setSelectedDayId(day.dt);
@@ -175,9 +175,9 @@ export default function Home() {
                   selectedDayId={selectedDayId}
                 />
               </div>
-              {weatherData.current.dt && typeof weatherData.current.dt === 'string' && (
+              {displayData.dt && typeof displayData.dt === 'string' && (
                 <div className="lg:col-span-3">
-                  <MoonCalendar date={new Date(weatherData.current.dt)} />
+                  <MoonCalendar date={new Date(displayData.dt)} />
                 </div>
               )}
             </div>

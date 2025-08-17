@@ -42,60 +42,6 @@ const getDominantWeatherCode = (hourlyCodes: number[]): number => {
     return parseInt(dominantCode, 10);
 };
 
-const processHourlyForecast = (hourlyData: OpenMeteoHourly, dayIndex: number): HourlyForecast[] => {
-  const startIndex = dayIndex * 24;
-  const endIndex = startIndex + 24;
-
-  if (startIndex >= hourlyData.time.length) return [];
-
-  return hourlyData.time.slice(startIndex, endIndex).map((timeISO, i) => {
-    const index = startIndex + i;
-    const code = hourlyData.weather_code[index];
-    
-    return {
-      time: timeISO,
-      temp: Math.round(hourlyData.temperature_2m[index]),
-      main: getMainWeatherFromCode(code),
-      pop: hourlyData.precipitation_probability[index],
-      weatherCode: code,
-    };
-  });
-};
-
-const processForecast = (weatherAPIData: OpenMeteoWeatherData): { daily: DailyForecast[], todayTemps: { min: number, max: number } } => {
-  const { daily, hourly } = weatherAPIData;
-  
-  const todayTemps = {
-    min: daily.temperature_2m_min[0],
-    max: daily.temperature_2m_max[0],
-  };
-
-  const aggregatedForecast: DailyForecast[] = daily.time.slice(1, 7).map((date, i) => {
-    const dayIndex = i + 1;
-    const hourlyCodesForDay = hourly.weather_code.slice(dayIndex * 24, (dayIndex + 1) * 24);
-    const dominantCode = getDominantWeatherCode(hourlyCodesForDay);
-    
-    return {
-      dt: date,
-      temp_min: Math.round(daily.temperature_2m_min[dayIndex]),
-      temp_max: Math.round(daily.temperature_2m_max[dayIndex]),
-      main: getMainWeatherFromCode(dominantCode),
-      description: getWeatherDescriptionFromCode(dominantCode),
-      pop: daily.precipitation_probability_max[dayIndex],
-      hourly: processHourlyForecast(hourly, dayIndex),
-      humidity: 0, // Open-Meteo provides hourly humidity, not daily aggregate. Could be calculated.
-      wind_speed: 0, // Open-Meteo provides hourly wind, not daily aggregate.
-      temp: Math.round((daily.temperature_2m_max[dayIndex] + daily.temperature_2m_min[dayIndex]) / 2),
-      feels_like: Math.round((daily.temperature_2m_max[dayIndex] + daily.temperature_2m_min[dayIndex]) / 2), // Open-Meteo doesn't provide daily feels_like
-      weatherCode: dominantCode,
-      sunrise: daily.sunrise[dayIndex],
-      sunset: daily.sunset[dayIndex],
-    };
-  });
-
-  return { daily: aggregatedForecast, todayTemps };
-};
-
 export async function getCityFromCoords(lat: number, lon: number): Promise<string> {
   const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
   try {
@@ -143,6 +89,7 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
     hourly: "temperature_2m,precipitation_probability,weather_code",
     daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max",
     timezone: "auto",
+    forecast_days: "7" // Fetch 7 days to have today + 6 days forecast
   });
   
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?${weatherParams}`;
@@ -157,42 +104,89 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
     }
 
     const weatherAPIData: OpenMeteoWeatherData = await weatherResponse.json();
-    const { daily: processedForecast, todayTemps } = processForecast(weatherAPIData);
+    const { daily: dailyData, hourly: hourlyData, current: currentData, timezone } = weatherAPIData;
 
-    const current: OpenMeteoCurrent = weatherAPIData.current;
-    const isDay = current.is_day === 1;
+    // Process 6-day forecast (from tomorrow, so i=1 to i=6)
+    const forecastData: DailyForecast[] = [];
+    for (let i = 1; i <= 6; i++) {
+        const forecastDateStr = dailyData.time[i]; // e.g. "2024-07-30"
+        
+        // Filter hourly data for the current forecast day
+        const dayHourlyData = hourlyData.time
+            .map((t, index) => ({ time: t, index })) // Keep original index
+            .filter(item => item.time.startsWith(forecastDateStr))
+            .map(item => ({
+                time: item.time,
+                temp: Math.round(hourlyData.temperature_2m[item.index]),
+                main: getMainWeatherFromCode(hourlyData.weather_code[item.index]),
+                pop: hourlyData.precipitation_probability[item.index],
+                weatherCode: hourlyData.weather_code[item.index],
+            }));
+        
+        const hourlyCodesForDay = dayHourlyData.map(h => h.weatherCode);
+        const dominantCode = getDominantWeatherCode(hourlyCodesForDay);
+        
+        const dayForecast: DailyForecast = {
+            dt: forecastDateStr,
+            temp_min: Math.round(dailyData.temperature_2m_min[i]),
+            temp_max: Math.round(dailyData.temperature_2m_max[i]),
+            main: getMainWeatherFromCode(dominantCode),
+            description: getWeatherDescriptionFromCode(dominantCode),
+            pop: dailyData.precipitation_probability_max[i],
+            hourly: dayHourlyData,
+            humidity: 0, 
+            wind_speed: 0, 
+            temp: Math.round((dailyData.temperature_2m_max[i] + dailyData.temperature_2m_min[i]) / 2),
+            feels_like: Math.round((dailyData.temperature_2m_max[i] + dailyData.temperature_2m_min[i]) / 2),
+            weatherCode: dominantCode,
+            sunrise: dailyData.sunrise[i],
+            sunset: dailyData.sunset[i],
+        };
+        forecastData.push(dayForecast);
+    }
+    
+    // Process Today's hourly data
+    const todayDateStr = dailyData.time[0];
+    const todayHourlyForecast: HourlyForecast[] = hourlyData.time
+        .map((t, index) => ({ time: t, index }))
+        .filter(item => item.time.startsWith(todayDateStr))
+        .map(item => ({
+            time: item.time,
+            temp: Math.round(hourlyData.temperature_2m[item.index]),
+            main: getMainWeatherFromCode(hourlyData.weather_code[item.index]),
+            pop: hourlyData.precipitation_probability[item.index],
+            weatherCode: hourlyData.weather_code[item.index],
+        }));
+
+    const isDay = currentData.is_day === 1;
 
     // Use hourly data for current pop, find the closest hour
     const now = new Date();
-    const closestHourIndex = weatherAPIData.hourly.time.findIndex(
-      (timeStr, index) => {
-        const hourDate = new Date(timeStr);
-        return now.getTime() < hourDate.getTime();
-      }
+    const closestHourIndex = hourlyData.time.findIndex(
+      (timeStr) => new Date(timeStr).getTime() > now.getTime()
     );
-    
-    const currentPop = weatherAPIData.hourly.precipitation_probability[closestHourIndex > 0 ? closestHourIndex -1 : 0];
+    const currentPop = hourlyData.precipitation_probability[closestHourIndex > 0 ? closestHourIndex -1 : 0];
 
     const weatherData: WeatherData = {
       current: {
         location: loc,
-        temp: current.temperature_2m,
-        feels_like: current.apparent_temperature,
-        humidity: current.relative_humidity_2m,
-        wind_speed: current.wind_speed_10m,
-        description: getWeatherDescriptionFromCode(current.weather_code, isDay),
-        main: getMainWeatherFromCode(current.weather_code),
+        temp: currentData.temperature_2m,
+        feels_like: currentData.apparent_temperature,
+        humidity: currentData.relative_humidity_2m,
+        wind_speed: currentData.wind_speed_10m,
+        description: getWeatherDescriptionFromCode(currentData.weather_code, isDay),
+        main: getMainWeatherFromCode(currentData.weather_code),
         pop: currentPop,
         dt: new Date().toISOString(),
-        temp_min: todayTemps.min,
-        temp_max: todayTemps.max,
-        sunrise: weatherAPIData.daily.sunrise[0],
-        sunset: weatherAPIData.daily.sunset[0],
-        timezone: weatherAPIData.timezone,
-        weatherCode: current.weather_code,
+        temp_min: dailyData.temperature_2m_min[0],
+        temp_max: dailyData.temperature_2m_max[0],
+        sunrise: dailyData.sunrise[0],
+        sunset: dailyData.sunset[0],
+        timezone: timezone,
+        weatherCode: currentData.weather_code,
       },
-      forecast: processedForecast,
-      hourly: processHourlyForecast(weatherAPIData.hourly, 0),
+      forecast: forecastData,
+      hourly: todayHourlyForecast,
     };
 
     return { ...prevState, success: true, weatherData, message: '' };
