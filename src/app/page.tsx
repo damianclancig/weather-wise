@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useActionState, useRef } from 'react';
 
 import type { WeatherData, DailyForecast, CurrentWeather, HourlyForecast } from '@/lib/types';
-import { getWeather, getCityName } from '@/app/actions';
+import { getWeather, getCityName, generateAndSetBackground } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -54,9 +54,16 @@ export default function Home() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [backgroundImage, setBackgroundImage] = useState<string>('');
+  const [backgroundHeight, setBackgroundHeight] = useState<number | null>(null);
   
   const initialFetchFormRef = useRef<HTMLFormElement>(null);
   const isInitialFetchDone = useRef(false);
+
+  useEffect(() => {
+    // Set the background height once on component mount, adding 20% to ensure it covers the full scroll length
+    setBackgroundHeight(window.innerHeight * 1.2);
+  }, []);
 
   const submitInitialForm = useCallback((lat?: number, lon?: number, loc?: string) => {
     if (initialFetchFormRef.current) {
@@ -168,57 +175,95 @@ export default function Home() {
     }
   }, [state, t, toast, weatherData]);
 
+  // Effect to generate background image after weather data is loaded
+  useEffect(() => {
+    if (weatherData) {
+      const generate = async () => {
+        try {
+          const bgImage = await generateAndSetBackground({
+            city: weatherData.current.location,
+            weather: weatherData.current.description,
+          });
+          if (bgImage) {
+            setBackgroundImage(bgImage);
+          }
+        } catch (e) {
+          console.error("Failed to generate background image asynchronously", e);
+        }
+      };
+      generate();
+    }
+  }, [weatherData]);
+
   const dateForMoon = displayData ? parseDateString(displayData.dt) : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-background font-body bg-gradient-to-br from-background to-[hsl(224,57%,15%)]">
-      <Header />
-       <form ref={initialFetchFormRef} action={formAction} className="hidden">
-          <input type="hidden" name="latitude" />
-          <input type="hidden" name="longitude" />
-          <input type="hidden" name="location" />
-      </form>
-      <main className="flex-grow px-4 py-2">
-         <div className="w-full max-w-4xl mx-auto mb-8 relative">
-            <SearchControls formAction={formAction} onRefreshLocation={handleRefreshLocation} />
-         </div>
-        <div className="flex justify-center items-start h-full">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center text-foreground/80 gap-4 mt-20">
-              <Loader className="w-12 h-12 animate-spin" />
-              <p className="text-xl">{t('loading')}</p>
+    <>
+      {/* Background Layer */}
+      <div 
+        className="fixed inset-x-0 top-0 z-[-1] bg-background"
+        style={{ height: backgroundHeight ? `${backgroundHeight}px` : '100vh' }}
+      >
+        {backgroundImage && (
+          <img
+            src={backgroundImage}
+            alt="Generated weather background"
+            className="h-full w-full object-cover transition-opacity duration-1000 ease-in-out"
+          />
+        )}
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
+      {/* Content Layer */}
+      <div className="relative z-0 flex min-h-screen flex-col">
+        <Header />
+          <form ref={initialFetchFormRef} action={formAction} className="hidden">
+            <input type="hidden" name="latitude" />
+            <input type="hidden" name="longitude" />
+            <input type="hidden" name="location" />
+        </form>
+        <main className="flex-grow px-4 py-2">
+            <div className="w-full max-w-4xl mx-auto mb-8 relative">
+              <SearchControls formAction={formAction} onRefreshLocation={handleRefreshLocation} />
             </div>
-          ) : error && !weatherData ? (
-             <GlassCard className="mt-20">
-                <div className="flex flex-col items-center justify-center text-destructive-foreground gap-4">
-                  <AlertTriangle className="w-12 h-12 text-destructive" />
-                  <h2 className="text-2xl font-bold">{t('errorTitle')}</h2>
-                  <p>{t(error)}</p>
-                </div>
-              </GlassCard>
-          ) : weatherData && displayData ? (
-            <div key={displayData.location + displayData.dt} className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
-              <div className="lg:col-span-3" id="current-weather">
-                <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} />
+          <div className="flex justify-center items-start h-full">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center text-foreground/80 gap-4 mt-20">
+                <Loader className="w-12 h-12 animate-spin" />
+                <p className="text-xl">{t('loading')}</p>
               </div>
-              <div className="lg:col-span-3" id="forecast">
-                <Forecast 
-                  data={weatherData.forecast} 
-                  onDaySelect={handleDaySelect} 
-                  onShowToday={handleShowToday}
-                  selectedDayId={selectedDayId}
-                />
+            ) : error && !weatherData ? (
+                <GlassCard className="mt-20">
+                  <div className="flex flex-col items-center justify-center text-destructive-foreground gap-4">
+                    <AlertTriangle className="w-12 h-12 text-destructive" />
+                    <h2 className="text-2xl font-bold">{t('errorTitle')}</h2>
+                    <p>{t(error)}</p>
+                  </div>
+                </GlassCard>
+            ) : weatherData && displayData ? (
+              <div className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
+                <GlassCard className="lg:col-span-3" id="current-weather">
+                  <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} />
+                </GlassCard>
+                <GlassCard className="lg:col-span-3" id="forecast">
+                  <Forecast 
+                    data={weatherData.forecast} 
+                    onDaySelect={handleDaySelect} 
+                    onShowToday={handleShowToday}
+                    selectedDayId={selectedDayId}
+                  />
+                </GlassCard>
+                {dateForMoon && !isNaN(dateForMoon.getTime()) && (
+                  <GlassCard className="lg:col-span-3" id="moon-calendar">
+                      <MoonCalendar date={dateForMoon} />
+                  </GlassCard>
+                )}
               </div>
-              {dateForMoon && !isNaN(dateForMoon.getTime()) && (
-                <div className="lg:col-span-3" id="moon-calendar">
-                   <MoonCalendar date={dateForMoon} />
-                </div>
-              )}
-            </div>
-          ) : null}
-        </div>
-      </main>
-      <Footer />
-    </div>
+            ) : null}
+          </div>
+        </main>
+        <Footer />
+      </div>
+    </>
   );
 }

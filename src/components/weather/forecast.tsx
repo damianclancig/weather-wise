@@ -3,7 +3,6 @@
 
 import type { DailyForecast } from '@/lib/types';
 import { useTranslation } from '@/hooks/use-translation';
-import { GlassCard } from '@/components/ui/glass-card';
 import { AnimatedWeatherIcon } from '@/components/icons/animated-weather-icon';
 import { Umbrella } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,15 +31,15 @@ export function Forecast({ data, onDaySelect, onShowToday, selectedDayId }: Fore
 
   if (!data || data.length === 0) {
     return (
-      <GlassCard>
+      <>
         <h3 className="text-xl font-bold mb-4">{t('forecastTitle')}</h3>
         <p>{t('loading')}</p>
-      </GlassCard>
+      </>
     );
   }
 
   return (
-    <GlassCard>
+    <>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-bold">{t('forecastTitle')}</h3>
         <Button 
@@ -80,6 +79,6 @@ export function Forecast({ data, onDaySelect, onShowToday, selectedDayId }: Fore
           )
         })}
       </div>
-    </GlassCard>
+    </>
   );
 }

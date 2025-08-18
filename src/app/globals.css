@@ -29,6 +29,10 @@
   html {
     @apply scroll-smooth;
   }
+
+  [id] {
+    scroll-margin-top: 4rem; /* Adjust this value based on your sticky header's height */
+  }
 }
 
 @layer base {

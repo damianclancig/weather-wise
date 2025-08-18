@@ -61,6 +61,12 @@ export interface WeatherCodeInfo {
   image: string;
 }
 
+// Types for AI Flow
+export interface GenerateBackgroundInput {
+    city: string;
+    weather: string;
+}
+
 // Types for Open-Meteo API
 export interface OpenMeteoCurrent {
   time: string;

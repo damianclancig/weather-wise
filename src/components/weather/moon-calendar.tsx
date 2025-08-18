@@ -2,7 +2,6 @@
 'use client';
 
 import { useTranslation } from "@/hooks/use-translation";
-import { GlassCard } from "../ui/glass-card";
 
 // Synodic month length (in days)
 const SYNODIC_MONTH = 29.530588853;
@@ -155,32 +154,30 @@ export function MoonCalendar({ date }: MoonCalendarProps) {
   const currentPhase = getMoonInfo(date);
   
   return (
-    <GlassCard>
-      <div className="p-1">
-        <h3 className="text-xl font-bold mb-4">{t('moonCalendarTitle')}</h3>
-        
-        {/* Current Moon Phase Display */}
-        <div className="flex flex-col items-center justify-center text-center gap-2 mb-6">
-            <CurrentMoonIcon phaseName={currentPhase.phaseName} illumination={currentPhase.illumination} />
-            <p className="text-lg font-semibold capitalize">{t(`moon.${currentPhase.phaseName}`)}</p>
-            <p className="text-sm text-foreground/80">{t('illumination', {percent: currentPhase.illumination})}</p>
-        </div>
-
-        {/* Upcoming Major Phases */}
-        <div className="grid grid-cols-4 gap-2 text-center">
-            {upcomingPhases.map((phase) => (
-                <div key={phase.name} className="flex flex-col items-center p-2 rounded-lg bg-white/5 gap-1">
-                    <PhaseIcon phaseName={phase.name} />
-                    <p className="font-semibold capitalize text-xs">{t(`moon.${phase.name}`)}</p>
-                    <p className="text-xs text-foreground/80">{phase.date.toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        timeZone: 'UTC'
-                    })}</p>
-                </div>
-            ))}
-        </div>
+    <div className="p-1">
+      <h3 className="text-xl font-bold mb-4">{t('moonCalendarTitle')}</h3>
+      
+      {/* Current Moon Phase Display */}
+      <div className="flex flex-col items-center justify-center text-center gap-2 mb-6">
+          <CurrentMoonIcon phaseName={currentPhase.phaseName} illumination={currentPhase.illumination} />
+          <p className="text-lg font-semibold capitalize">{t(`moon.${currentPhase.phaseName}`)}</p>
+          <p className="text-sm text-foreground/80">{t('illumination', {percent: currentPhase.illumination})}</p>
       </div>
-    </GlassCard>
+
+      {/* Upcoming Major Phases */}
+      <div className="grid grid-cols-4 gap-2 text-center">
+          {upcomingPhases.map((phase) => (
+              <div key={phase.name} className="flex flex-col items-center p-2 rounded-lg bg-white/5 gap-1">
+                  <PhaseIcon phaseName={phase.name} />
+                  <p className="font-semibold capitalize text-xs">{t(`moon.${phase.name}`)}</p>
+                  <p className="text-xs text-foreground/80">{phase.date.toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      timeZone: 'UTC'
+                  })}</p>
+              </div>
+          ))}
+      </div>
+    </div>
   );
 }

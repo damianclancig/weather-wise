@@ -3,7 +3,6 @@
 
 import type { CurrentWeather as CurrentWeatherType, DailyForecast, HourlyForecast as HourlyForecastType } from '@/lib/types';
 import { useTranslation } from '@/hooks/use-translation';
-import { GlassCard } from '@/components/ui/glass-card';
 import { AnimatedWeatherIcon } from '@/components/icons/animated-weather-icon';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { Thermometer, Droplets, Wind, MapPin, Umbrella } from 'lucide-react';
@@ -21,7 +20,7 @@ interface CurrentWeatherProps {
 export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
   const { t } = useTranslation();
   
-  const weatherDescriptionKey = `weather.${data.description.replace(/\s/g, '_')}`;
+  const weatherDescriptionKey = `weather.${data.description}`;
 
   const parseDateString = (dt: string) => {
     // If it's just a date 'YYYY-MM-DD', replace dashes to avoid UTC parsing issues.
@@ -45,19 +44,18 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
   const hasSunData = 'sunrise' in data && data.sunrise && 'sunset' in data && data.sunset && 'timezone' in data;
   
   let isNight = false;
-  if (hasSunData) {
+  // This is the crucial check: Only determine night for *current* weather, not for future forecast days.
+  // We identify current weather because its `dt` is a full ISO string (containing 'T').
+  if (hasSunData && typeof data.dt === 'string' && data.dt.includes('T')) {
     const sunriseTimestamp = new Date(data.sunrise).getTime();
     const sunsetTimestamp = new Date(data.sunset).getTime();
-    
-    // For forecast days, the DT is 'YYYY-MM-DD', which JS parses as UTC midnight.
-    // For current weather, the DT is a full ISO string.
-    const nowTimestamp = new Date(data.dt).getTime();
+    const nowTimestamp = new Date().getTime();
 
     isNight = nowTimestamp < sunriseTimestamp || nowTimestamp > sunsetTimestamp;
   }
 
   return (
-    <GlassCard>
+    <>
       <div className="flex flex-col md:flex-row justify-between md:items-start p-1">
         {/* Location and Date */}
         <div className="flex flex-col items-center text-center md:items-start md:text-left w-full">
@@ -131,6 +129,6 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
           timezone={hasSunData ? data.timezone : undefined}
         />
       </div>
-    </GlassCard>
+    </>
   );
 }

@@ -1,12 +1,14 @@
 
 'use server';
 
-import type { WeatherData, DailyForecast, HourlyForecast, CitySuggestion, OpenMeteoWeatherData, OpenMeteoDaily, OpenMeteoHourly, OpenMeteoCurrent, WeatherCodeInfo } from "@/lib/types";
+import type { WeatherData, DailyForecast, HourlyForecast, CitySuggestion, OpenMeteoWeatherData, OpenMeteoDaily, OpenMeteoHourly, OpenMeteoCurrent, WeatherCodeInfo, GenerateBackgroundInput } from "@/lib/types";
 import { weatherCodes } from "@/lib/weather-codes";
+import { generateBackground } from "@/ai/flows/generate-background-flow";
 
 const getWeatherDescriptionFromCode = (code: number, isDay: boolean = true): string => {
   const codeInfo: WeatherCodeInfo = weatherCodes[code] || weatherCodes[0];
-  const descriptionKey = codeInfo.description.replace(/\s+/g, '_').toLowerCase();
+  // Sanitize the description to create a valid key: lowercase and replace non-alphanumerics with underscores.
+  const descriptionKey = codeInfo.description.replace(/: /g, '_').replace(/ /g, '_').toLowerCase();
   return descriptionKey;
 };
 
@@ -196,6 +198,17 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
     return { ...prevState, success: false, message: 'fetchError' };
   }
 }
+
+export async function generateAndSetBackground(input: GenerateBackgroundInput): Promise<string> {
+    try {
+        const bg = await generateBackground(input);
+        return bg.image;
+    } catch(e) {
+        console.error('Failed to generate background image', e);
+        return '';
+    }
+}
+
 
 export async function getCityName(lat: number, lon: number): Promise<string> {
   return getCityFromCoords(lat, lon);
