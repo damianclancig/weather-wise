@@ -20,7 +20,7 @@ const getDayInfo = (dateString: string) => {
   // Use 'T12:00:00Z' to force UTC and avoid timezone shifting issues
   const date = new Date(`${dateString}T12:00:00Z`);
 
-  const dayName = date.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' });
+  const dayName = date.toLocaleDateString(undefined, { weekday: 'long', timeZone: 'UTC' });
   const dayNumber = date.getUTCDate();
   
   return { dayName, dayNumber };
@@ -64,7 +64,7 @@ export function Forecast({ data, onDaySelect, onShowToday, selectedDayId }: Fore
                 isSelected && "bg-white/20"
               )}
             >
-              <p className="font-semibold text-foreground/80">{dayName} {dayNumber}</p>
+              <p className="font-semibold text-foreground/80 capitalize">{dayName} {dayNumber}</p>
               <div className="flex items-center justify-around w-full">
                 <AnimatedWeatherIcon code={day.weatherCode} className="w-12 h-12" />
                 <div className="flex flex-col items-center">

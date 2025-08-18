@@ -146,7 +146,9 @@ export function MoonCalendar({ date }: MoonCalendarProps) {
   const { t } = useTranslation();
 
   if (!date || isNaN(date.getTime())) {
-    return null; // Or a loading/error state
+    // When a forecast day is selected, it first renders with the old 'today' date
+    // which might be invalid if it was an ISO string. This prevents a crash.
+    return null; 
   }
 
   const upcomingPhases = getUpcomingMajorPhases(date);

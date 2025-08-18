@@ -10,6 +10,7 @@ import { useTranslation } from '@/hooks/use-translation';
 
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { SearchControls } from '@/components/weather/search-controls';
 import { CurrentWeather as CurrentWeatherComponent } from '@/components/weather/current-weather';
 import { Forecast } from '@/components/weather/forecast';
 import { Loader, AlertTriangle } from 'lucide-react';
@@ -29,6 +30,17 @@ const initialState: FormState = {
 
 // This new type will hold the data for the main display card
 type DisplayWeather = (CurrentWeather | DailyForecast) & { dt: number | string };
+
+const parseDateString = (dt: string | number) => {
+    const dtStr = String(dt);
+    // If it's just a date 'YYYY-MM-DD', replace dashes to avoid UTC parsing issues.
+    // If it's a full ISO string, it can be parsed directly.
+    if (!dtStr.includes('T')) {
+      return new Date(dtStr.replace(/-/g, '/'));
+    }
+    return new Date(dtStr);
+};
+
 
 export default function Home() {
   const [state, formAction] = useActionState(getWeather, initialState);
@@ -71,7 +83,6 @@ export default function Home() {
   const handleDaySelect = (day: DailyForecast) => {
     if (!weatherData) return;
   
-    // Create a complete display object exclusively from the selected forecast day.
     const newDisplayData: DisplayWeather = {
       ...day,
       location: weatherData.current.location,
@@ -92,6 +103,25 @@ export default function Home() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
+
+  const handleRefreshLocation = useCallback(() => {
+    setIsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const cityName = await getCityName(latitude, longitude);
+        submitInitialForm(latitude, longitude, cityName);
+      },
+      (error) => {
+        setIsLoading(false);
+        toast({
+          variant: "destructive",
+          title: t('errorTitle'),
+          description: t('geolocationError'),
+        });
+      }
+    );
+  }, [submitInitialForm, t, toast]);
 
   useEffect(() => {
     if (isInitialFetchDone.current) return;
@@ -138,16 +168,20 @@ export default function Home() {
     }
   }, [state, t, toast, weatherData]);
 
+  const dateForMoon = displayData ? parseDateString(displayData.dt) : null;
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-body bg-gradient-to-br from-background to-[hsl(224,57%,15%)]">
-      <Header formAction={formAction} />
+      <Header />
        <form ref={initialFetchFormRef} action={formAction} className="hidden">
           <input type="hidden" name="latitude" />
           <input type="hidden" name="longitude" />
           <input type="hidden" name="location" />
       </form>
       <main className="flex-grow px-4 py-2">
+         <div className="w-full max-w-4xl mx-auto mb-8 relative">
+            <SearchControls formAction={formAction} onRefreshLocation={handleRefreshLocation} />
+         </div>
         <div className="flex justify-center items-start h-full">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center text-foreground/80 gap-4 mt-20">
@@ -164,10 +198,10 @@ export default function Home() {
               </GlassCard>
           ) : weatherData && displayData ? (
             <div key={displayData.location + displayData.dt} className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-3" id="current-weather">
                 <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} />
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-3" id="forecast">
                 <Forecast 
                   data={weatherData.forecast} 
                   onDaySelect={handleDaySelect} 
@@ -175,9 +209,9 @@ export default function Home() {
                   selectedDayId={selectedDayId}
                 />
               </div>
-              {displayData.dt && typeof displayData.dt === 'string' && (
-                <div className="lg:col-span-3">
-                  <MoonCalendar date={new Date(displayData.dt)} />
+              {dateForMoon && !isNaN(dateForMoon.getTime()) && (
+                <div className="lg:col-span-3" id="moon-calendar">
+                   <MoonCalendar date={dateForMoon} />
                 </div>
               )}
             </div>

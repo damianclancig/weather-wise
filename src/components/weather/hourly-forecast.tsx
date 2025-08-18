@@ -1,10 +1,12 @@
 
 'use client';
 
+import { useRef, useEffect, useState } from 'react';
 import type { HourlyForecast as HourlyForecastType } from '@/lib/types';
 import { useTranslation } from '@/hooks/use-translation';
 import { AnimatedWeatherIcon } from '@/components/icons/animated-weather-icon';
 import { Umbrella, Sunrise, Sunset } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // New type to include sunrise/sunset events
 type TimelineEvent = 
@@ -29,6 +31,8 @@ const formatTime = (date: Date, timezone: string) => {
 
 export function HourlyForecast({ data, sunrise, sunset, timezone }: HourlyForecastProps) {
   const { t } = useTranslation();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [currentEventIndex, setCurrentEventIndex] = useState(-1);
 
   if (!data || data.length === 0 || !timezone) {
     return null;
@@ -58,9 +62,56 @@ export function HourlyForecast({ data, sunrise, sunset, timezone }: HourlyForeca
   // Sort all events chronologically
   timelineEvents.sort((a, b) => a.dt - b.dt);
   
+  // Check if the forecast being displayed is for today.
+  // We can do this by seeing if any of the event times are in the past.
+  const now = new Date().getTime();
+  const isToday = timelineEvents.some(event => event.dt < now);
+
+  useEffect(() => {
+    if (!isToday) {
+        setCurrentEventIndex(-1); // Reset index if not today
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        }
+        return;
+    }
+    
+    // Find the index of the first event that is in the future
+    const nextEventIndex = timelineEvents.findIndex(event => event.dt > now);
+    
+    let indexToFocus: number;
+    if (nextEventIndex === -1) {
+      // If all events are in the past, focus the last one
+      indexToFocus = timelineEvents.length - 1;
+    } else if (nextEventIndex === 0) {
+      // If all events are in the future, focus the first one
+      indexToFocus = 0;
+    } else {
+      // Otherwise, focus the event just before the next one (the current one)
+      indexToFocus = nextEventIndex - 1;
+    }
+
+    setCurrentEventIndex(indexToFocus);
+
+    if (scrollContainerRef.current && indexToFocus > -1) {
+      const targetElement = scrollContainerRef.current.children[indexToFocus] as HTMLElement;
+      if (targetElement) {
+        setTimeout(() => {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            inline: 'center',
+            block: 'nearest'
+          });
+        }, 100);
+      }
+    }
+  // This dependency array is correct. We only want to re-run this when the core data changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, sunrise, sunset, timezone, isToday]);
+  
   return (
     <div className="overflow-x-auto pb-2 -mb-2">
-      <div className="flex space-x-4">
+      <div ref={scrollContainerRef} className="flex space-x-4">
         {timelineEvents.map((item, index) => {
           
           let isNight = false;
@@ -68,8 +119,16 @@ export function HourlyForecast({ data, sunrise, sunset, timezone }: HourlyForeca
              isNight = item.dt < sunriseDate.getTime() || item.dt > sunsetDate.getTime();
           }
 
+          const isCurrent = index === currentEventIndex;
+
           return (
-            <div key={index} className="flex flex-col items-center p-2 rounded-lg bg-white/5 gap-1 min-w-[70px]">
+            <div 
+              key={index} 
+              className={cn(
+                "flex flex-col items-center p-2 rounded-lg gap-1 min-w-[70px] transition-colors",
+                isCurrent ? "bg-white/20" : "bg-white/5"
+              )}
+            >
               <p className="font-semibold text-foreground/80 text-sm">{item.time}</p>
               
               {item.type === 'hour' && (

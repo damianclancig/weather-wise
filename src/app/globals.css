@@ -25,6 +25,10 @@
     --ring: 207 70% 53%;
     --radius: 0.5rem;
   }
+
+  html {
+    @apply scroll-smooth;
+  }
 }
 
 @layer base {
