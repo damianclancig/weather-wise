@@ -27,7 +27,7 @@ interface SearchControlsProps {
 }
 
 export function SearchControls({ formAction, onRefreshLocation }: SearchControlsProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { pending } = useFormStatus();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
@@ -64,13 +64,13 @@ export function SearchControls({ formAction, onRefreshLocation }: SearchControls
     }
 
     const debounceTimeout = setTimeout(async () => {
-      const newSuggestions = await getCitySuggestions(query);
+      const newSuggestions = await getCitySuggestions(query, locale);
       setSuggestions(newSuggestions);
       setShowSuggestions(newSuggestions.length > 0);
     }, 300);
 
     return () => clearTimeout(debounceTimeout);
-  }, [query]);
+  }, [query, locale]);
   
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -122,3 +122,5 @@ export function SearchControls({ formAction, onRefreshLocation }: SearchControls
     </div>
   );
 }
+
+    

@@ -214,12 +214,12 @@ export async function getCityName(lat: number, lon: number): Promise<string> {
   return getCityFromCoords(lat, lon);
 }
 
-export async function getCitySuggestions(query: string): Promise<CitySuggestion[]> {
+export async function getCitySuggestions(query: string, language: string = 'en'): Promise<CitySuggestion[]> {
   if (query.length < 3) {
     return [];
   }
 
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&format=json&language=${language}`;
 
   try {
     const response = await fetch(url);
@@ -235,7 +235,14 @@ export async function getCitySuggestions(query: string): Promise<CitySuggestion[
     const seen = new Set<string>();
 
     data.results.forEach((item: any) => {
-      const name = `${item.name}, ${item.country}`;
+      // The name can be composed of name, admin1 (state/province), and country
+      // Let's create a more descriptive name, but keep it clean
+      let name = item.name;
+      if (item.admin1 && item.name !== item.admin1) {
+          name += `, ${item.admin1}`;
+      }
+      name += `, ${item.country}`;
+
       if (!seen.has(name)) {
         suggestions.push({
           name: name,
@@ -252,3 +259,5 @@ export async function getCitySuggestions(query: string): Promise<CitySuggestion[
     return [];
   }
 }
+
+    
