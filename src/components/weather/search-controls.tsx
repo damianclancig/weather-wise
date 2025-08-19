@@ -24,10 +24,11 @@ function SubmitButton() {
 interface SearchControlsProps {
   formAction: (payload: FormData) => void;
   onRefreshLocation: () => void;
+  locale: string;
 }
 
-export function SearchControls({ formAction, onRefreshLocation }: SearchControlsProps) {
-  const { t, locale } = useTranslation();
+export function SearchControls({ formAction, onRefreshLocation, locale }: SearchControlsProps) {
+  const { t } = useTranslation();
   const { pending } = useFormStatus();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
@@ -38,9 +39,20 @@ export function SearchControls({ formAction, onRefreshLocation }: SearchControls
   const handleSuggestionClick = (suggestion: CitySuggestion) => {
     if (formRef.current) {
       const form = formRef.current;
+      // Get all the inputs
       const locationInput = form.elements.namedItem('location') as HTMLInputElement;
+      const latInput = form.elements.namedItem('latitude') as HTMLInputElement;
+      const lonInput = form.elements.namedItem('longitude') as HTMLInputElement;
+
+      // Set the values
       locationInput.value = suggestion.name;
+      latInput.value = suggestion.lat.toString();
+      lonInput.value = suggestion.lon.toString();
+      
+      // Submit the form
       form.requestSubmit();
+
+      // Clean up
       setShowSuggestions(false);
       setQuery('');
     }
@@ -52,8 +64,15 @@ export function SearchControls({ formAction, onRefreshLocation }: SearchControls
   }
 
   const handleFormAction = (formData: FormData) => {
+      // Clear latitude and longitude if only a text search is performed
+      const latInput = formRef.current?.elements.namedItem('latitude') as HTMLInputElement;
+      const lonInput = formRef.current?.elements.namedItem('longitude') as HTMLInputElement;
+      if(latInput) latInput.value = '';
+      if(lonInput) lonInput.value = '';
+
       formAction(formData);
       setQuery('');
+      setShowSuggestions(false);
   }
 
   useEffect(() => {
@@ -102,7 +121,12 @@ export function SearchControls({ formAction, onRefreshLocation }: SearchControls
           onFocus={() => query.length >=3 && setShowSuggestions(true)}
           autoComplete="off"
         />
+        {/* Hidden fields for lat/lon */}
+        <input type="hidden" name="latitude" />
+        <input type="hidden" name="longitude" />
+        
         <SubmitButton />
+        
         {showSuggestions && (
           <div className="absolute top-full mt-2 w-full bg-popover rounded-md shadow-lg border border-border/60 z-50">
             <ul>
@@ -122,5 +146,3 @@ export function SearchControls({ formAction, onRefreshLocation }: SearchControls
     </div>
   );
 }
-
-    

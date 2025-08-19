@@ -10,7 +10,11 @@ import { SunriseSunset } from './sunrise-sunset';
 import { DetailItem } from './detail-item';
 
 
-type DisplayWeather = (CurrentWeatherType | DailyForecast) & { dt: string; weatherCode: number };
+// This new type will hold the data for the main display card.
+// It must include all properties needed by child components.
+// We combine properties from CurrentWeather and DailyForecast.
+type DisplayWeather = CurrentWeatherType | (DailyForecast & Pick<CurrentWeatherType, 'location' | 'timezone' | 'latitude'>);
+
 
 interface CurrentWeatherProps {
   data: DisplayWeather;
@@ -22,13 +26,14 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
   
   const weatherDescriptionKey = `weather.${data.description}`;
 
-  const parseDateString = (dt: string) => {
+  const parseDateString = (dt: string | number) => {
     // If it's just a date 'YYYY-MM-DD', replace dashes to avoid UTC parsing issues.
     // If it's a full ISO string, it can be parsed directly.
-    if (!dt.includes('T')) {
-      return new Date(dt.replace(/-/g, '/'));
+    const dtStr = String(dt);
+    if (!dtStr.includes('T')) {
+      return new Date(dtStr.replace(/-/g, '/'));
     }
-    return new Date(dt);
+    return new Date(dtStr);
   }
 
   const date = parseDateString(data.dt);

@@ -16,6 +16,7 @@ export interface CurrentWeather {
   sunset: string; // ISO 8601 Date string
   timezone: string; // e.g., 'Europe/Berlin'
   weatherCode: number;
+  latitude: number;
 }
 
 export interface DailyForecast {
@@ -47,6 +48,7 @@ export interface WeatherData {
   current: CurrentWeather;
   forecast: DailyForecast[];
   hourly: HourlyForecast[];
+  latitude: number;
 }
 
 export interface CitySuggestion {

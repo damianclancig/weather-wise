@@ -57,6 +57,16 @@ const pt = {
     waning_gibbous: "Gibosa Minguante",
     third_quarter: "Quarto Minguante",
     waning_crescent: "Lua Minguante",
+  },
+  attribution: {
+    weather: "Dados meteorológicos fornecidos por",
+    geocoding: "Geocodificação por",
+    images: "Imagens de fundo geradas por",
+    moon: "Os cálculos das fases da lua são realizados localmente."
+  },
+  footer: {
+    rights: "Todos os direitos reservados - Licença MIT",
+    designedBy: "Design e desenvolvimento por"
   }
 };
 

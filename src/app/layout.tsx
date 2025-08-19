@@ -10,34 +10,34 @@ const APP_URL = new URL(process.env.APP_URL || 'https://clima.clancig.com.ar');
 
 export const metadata: Metadata = {
   title: {
-    default: 'WeatherWise - Pronóstico del Tiempo en Tiempo Real',
+    default: 'WeatherWise - Pronóstico del Tiempo con IA',
     template: '%s | WeatherWise',
   },
-  description: 'Obtén el pronóstico del tiempo preciso y actualizado para cualquier ciudad del mundo. Consulta la temperatura, humedad, viento y la previsión para los próximos 5 días.',
+  description: 'Aplicación del tiempo con pronósticos precisos, búsqueda multilingüe y fondos espectaculares generados por IA (Gemini) que reflejan el clima actual.',
   metadataBase: APP_URL,
   applicationName: 'WeatherWise',
-  keywords: ['clima', 'tiempo', 'pronóstico', 'temperatura', 'weather', 'forecast'],
+  keywords: ['clima', 'tiempo', 'pronóstico', 'temperatura', 'weather', 'forecast', 'ia', 'ai', 'inteligencia artificial', 'gemini', 'multilenguaje', 'multi-idioma'],
   authors: [{ name: 'Clancig', url: new URL('https://github.com/damianclancig/weather-wise') }],
   creator: 'Clancig',
   openGraph: {
     type: 'website',
     url: APP_URL,
-    title: 'WeatherWise - Pronóstico del Tiempo en Tiempo Real',
-    description: 'Consulta el pronóstico del tiempo preciso para cualquier ciudad.',
+    title: 'WeatherWise - Pronóstico del Tiempo con Fondos de IA',
+    description: 'Consulta el pronóstico del tiempo preciso con una interfaz moderna y fondos generados por IA que se adaptan al clima.',
     siteName: 'WeatherWise',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'WeatherWise App',
+        alt: 'WeatherWise App con fondo de IA',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'WeatherWise - Pronóstico del Tiempo',
-    description: 'El pronóstico del tiempo preciso y actualizado para tu ciudad.',
+    title: 'WeatherWise - Pronóstico del Tiempo con IA',
+    description: 'El pronóstico del tiempo más visual: datos precisos y fondos generados por IA.',
     images: ['/og-image.png'],
   },
   appleWebApp: {

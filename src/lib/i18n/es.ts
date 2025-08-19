@@ -57,6 +57,16 @@ const es = {
     waning_gibbous: "Gibosa Menguante",
     third_quarter: "Cuarto Menguante",
     waning_crescent: "Luna Menguante",
+  },
+  attribution: {
+    weather: "Datos del tiempo provistos por",
+    geocoding: "Geocodificación por",
+    images: "Imágenes de fondo generadas por",
+    moon: "Los cálculos de las fases lunares se realizan localmente."
+  },
+  footer: {
+    rights: "Todos los derechos reservados - Licencia MIT",
+    designedBy: "Diseño y desarrollo por"
   }
 };
 

@@ -1,11 +1,11 @@
 
-# WeatherWise - Pronóstico del Tiempo en Tiempo Real
+# WeatherWise - Pronóstico del Tiempo en Tiempo Real con IA
 
 ![Captura de Pantalla de WeatherWise](public/assets/screenshot.png)
 
-**WeatherWise** es una aplicación web moderna y elegante que proporciona pronósticos del tiempo en tiempo real para cualquier ciudad del mundo. Construida con tecnologías de vanguardia, ofrece una experiencia de usuario rápida, receptiva e intuitiva.
+**WeatherWise** es una aplicación web moderna y elegante que proporciona pronósticos del tiempo en tiempo real para cualquier ciudad del mundo. Construida con tecnologías de vanguardia, ofrece una experiencia de usuario rápida, receptiva e inmersiva, destacando por sus **fondos de pantalla dinámicos generados por Inteligencia Artificial** que reflejan el clima actual de la ciudad consultada.
 
-La aplicación detecta automáticamente la ubicación del usuario para proporcionar un pronóstico local instantáneo y también permite buscar cualquier otra ciudad. La interfaz está diseñada para ser limpia e informativa, con iconos animados y un diseño futurista tipo "tarjeta de cristal" con bordes animados brillantes.
+La aplicación detecta automáticamente la ubicación del usuario para proporcionar un pronóstico local instantáneo. La interfaz está diseñada para ser limpia e informativa, con iconos animados y un diseño futurista tipo "tarjeta de cristal".
 
 **Demo en Vivo:** [clima.clancig.com.ar](https://clima.clancig.com.ar)
 
@@ -13,14 +13,15 @@ La aplicación detecta automáticamente la ubicación del usuario para proporcio
 
 ## ✨ Características
 
+- **Fondos Generados por IA:** Imágenes de fondo espectaculares y únicas, creadas en tiempo real por Google Gemini, que representan visualmente el clima y la ubicación buscada.
 - **Datos Meteorológicos en Tiempo Real:** Obtén información actualizada al minuto sobre temperatura, sensación térmica, humedad, velocidad del viento y probabilidad de precipitación.
 - **Geolocalización:** Obtiene automáticamente el clima de tu ubicación actual al cargar la página.
-- **Búsqueda de Ciudades con Autocompletado:** Encuentra fácilmente cualquier ciudad del mundo con una barra de búsqueda inteligente que ofrece sugerencias mientras escribes.
-- **Pronóstico a 6 Días:** Planifica con antelación con un pronóstico detallado para los próximos seis días. Al seleccionar un día, la tarjeta principal se actualiza con la información completa de esa fecha.
+- **Búsqueda Multilingüe con Autocompletado:** Encuentra fácilmente cualquier ciudad del mundo. Puedes buscar "London", "Londres" o "Londra" y la aplicación entenderá tu búsqueda gracias a la detección de idioma.
+- **Pronóstico a 6 Días:** Planifica con antelación con un pronóstico detallado. Al seleccionar un día, la tarjeta principal se actualiza con la información completa de esa fecha.
 - **Pronóstico por Horas:** Visualiza el pronóstico para las próximas horas en un carrusel interactivo dentro de la tarjeta principal.
 - **Fases de la Luna:** Consulta la fase lunar actual y las fechas de las próximas fases principales.
 - **Diseño Receptivo:** Una interfaz totalmente receptiva que se ve genial en computadoras de escritorio, tabletas y dispositivos móviles.
-- **Interfaz de Usuario Dinámica:** Incluye iconos meteorológicos animados y un moderno diseño de "tarjeta de cristal" con bordes iridiscentes.
+- **Interfaz de Usuario Dinámica:** Incluye iconos meteorológicos animados para cada condición climática y un moderno diseño de "tarjeta de cristal".
 - **Soporte Multilingüe:** Interfaz disponible en inglés, español y portugués, que se adapta al idioma del navegador.
 
 ---
@@ -34,12 +35,14 @@ Este proyecto está construido con un stack tecnológico moderno y listo para pr
 - **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
 - **Componentes de UI:** [ShadCN UI](https://ui.shadcn.com/)
 - **Iconos:** [Lucide React](https://lucide.dev/guide/packages/lucide-react)
+- **Inteligencia Artificial:** [Google Gemini](https://ai.google.dev/) a través de [Genkit](https://firebase.google.com/docs/genkit) para la generación de imágenes.
 
 ---
 
 ## 🔌 APIs
 
 - **[API de Open-Meteo](https://open-meteo.com/):** Utilizada para obtener datos del tiempo actual y pronósticos. ¡Es gratuita y no requiere API Key!
+- **[Google AI (Gemini)](https://ai.google.dev/):** Para la generación de imágenes de fondo dinámicas.
 - **[BigDataCloud Reverse Geocoding](https://www.bigdatacloud.com/):** Para obtener el nombre de la ciudad a partir de coordenadas.
 
 ---
@@ -67,10 +70,14 @@ Sigue estas instrucciones para obtener una copia local del proyecto y ponerla en
     ```
 
 3.  **Configura las variables de entorno:**
-    Crea un archivo llamado `.env.local` en la raíz de tu proyecto.
+    Crea un archivo llamado `.env.local` en la raíz de tu proyecto. Necesitarás una API Key de Google AI para la generación de imágenes. Puedes obtenerla gratis en [Google AI Studio](https://aistudio.google.com/app/apikey).
 
     ```.env.local
-    APP_URL=http://localhost:3000
+    # URL de tu aplicación (para desarrollo local)
+    APP_URL=http://localhost:9002
+
+    # Clave de API de Google AI Studio para Gemini
+    GEMINI_API_KEY=tu_api_key_aqui
     ```
 
 ### Ejecutar la Aplicación

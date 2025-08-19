@@ -12,6 +12,7 @@ const MAJOR_PHASES = ['new_moon', 'first_quarter', 'full_moon', 'third_quarter']
 
 interface MoonCalendarProps {
     date: Date;
+    latitude: number;
 }
 
 function toJulian(date: Date): number {
@@ -76,7 +77,9 @@ function getUpcomingMajorPhases(currentDate: Date): { name: string; date: Date }
   return results.sort((a,b) => a.date.getTime() - b.date.getTime()).slice(0, 4);
 }
 
-const PhaseIcon = ({ phaseName }: { phaseName: string }) => {
+const PhaseIcon = ({ phaseName, latitude }: { phaseName: string, latitude: number }) => {
+  const isSouthernHemisphere = latitude < 0;
+
   const iconMap: Record<string, JSX.Element> = {
     new_moon: <circle key="nm" cx="12" cy="12" r="10" fill="black" stroke="currentColor" strokeWidth="0.5" />,
     first_quarter: <path key="fq" d="M12 2 a 10 10 0 0 1 0 20 V2z" fill="currentColor" />,
@@ -84,17 +87,17 @@ const PhaseIcon = ({ phaseName }: { phaseName: string }) => {
     third_quarter: <path key="tq" d="M12 2 a 10 10 0 0 0 0 20 V2z" fill="currentColor" />,
   };
   return (
-    <svg viewBox="0 0 24 24" className="w-8 h-8 text-foreground/80">
+    <svg viewBox="0 0 24 24" className="w-8 h-8 text-foreground/80" style={{ transform: isSouthernHemisphere ? 'rotate(180deg)' : 'none' }}>
       {iconMap[phaseName] || iconMap.new_moon}
     </svg>
   );
 };
 
-const CurrentMoonIcon = ({ phaseName, illumination }: { phaseName: string; illumination: number }) => {
-  // Simple heuristic to determine if it's waxing or waning for crescent/gibbous
+const CurrentMoonIcon = ({ phaseName, illumination, latitude }: { phaseName: string; illumination: number; latitude: number }) => {
   const isWaxing = phaseName?.includes('waxing') || phaseName === 'first_quarter';
-
-  const r = 10; // radius
+  const isSouthernHemisphere = latitude < 0;
+  
+  const r = 10;
   const cx = 12;
   const cy = 12;
   
@@ -108,25 +111,22 @@ const CurrentMoonIcon = ({ phaseName, illumination }: { phaseName: string; illum
   } else if (phaseName === 'third_quarter') {
       path = <path d={`M12 2 a ${r} ${r} 0 0 0 0 ${2*r} V 2 Z`} fill="currentColor" />;
   } else {
-       // Crescent and Gibbous phases
       const isGibbous = phaseName.includes('gibbous');
+      // Flip the sweep flag for Southern Hemisphere to reverse the direction of the crescent
       const sweepFlag = isWaxing ? 1 : 0;
       const largeArcFlag = isGibbous ? 1 : 0;
       
-      // We calculate the x-radius of the ellipse to simulate illumination
       const xRadius = r * Math.abs(1 - (illumination / 50));
       
       const start = `M12,2`;
       const arc1 = `A ${r} ${r} 0 ${largeArcFlag} ${sweepFlag} 12,22`;
-      // The second arc is an ellipse
       const arc2 = `A ${xRadius} ${r} 0 ${largeArcFlag} ${sweepFlag === 1 ? 0 : 1} 12,2`;
 
       path = <path d={`${start} ${arc1} ${arc2} Z`} fill="currentColor" />;
   }
 
-
   return (
-    <svg viewBox="0 0 24 24" className="w-24 h-24 text-foreground">
+    <svg viewBox="0 0 24 24" className="w-24 h-24 text-foreground" style={{ transform: isSouthernHemisphere ? 'rotate(180deg)' : 'none' }}>
       <defs>
         <mask id="moon-mask">
           <circle cx={cx} cy={cy} r={r} fill="white" />
@@ -141,7 +141,7 @@ const CurrentMoonIcon = ({ phaseName, illumination }: { phaseName: string; illum
 };
 
 
-export function MoonCalendar({ date }: MoonCalendarProps) {
+export function MoonCalendar({ date, latitude }: MoonCalendarProps) {
   const { t } = useTranslation();
 
   if (!date || isNaN(date.getTime())) {
@@ -159,7 +159,7 @@ export function MoonCalendar({ date }: MoonCalendarProps) {
       
       {/* Current Moon Phase Display */}
       <div className="flex flex-col items-center justify-center text-center gap-2 mb-6">
-          <CurrentMoonIcon phaseName={currentPhase.phaseName} illumination={currentPhase.illumination} />
+          <CurrentMoonIcon phaseName={currentPhase.phaseName} illumination={currentPhase.illumination} latitude={latitude} />
           <p className="text-lg font-semibold capitalize">{t(`moon.${currentPhase.phaseName}`)}</p>
           <p className="text-sm text-foreground/80">{t('illumination', {percent: currentPhase.illumination})}</p>
       </div>
@@ -168,7 +168,7 @@ export function MoonCalendar({ date }: MoonCalendarProps) {
       <div className="grid grid-cols-4 gap-2 text-center">
           {upcomingPhases.map((phase) => (
               <div key={phase.name} className="flex flex-col items-center p-2 rounded-lg bg-white/5 gap-1">
-                  <PhaseIcon phaseName={phase.name} />
+                  <PhaseIcon phaseName={phase.name} latitude={latitude} />
                   <p className="font-semibold capitalize text-xs">{t(`moon.${phase.name}`)}</p>
                   <p className="text-xs text-foreground/80">{phase.date.toLocaleDateString(undefined, {
                       month: 'short',

@@ -72,7 +72,7 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
 
   // If we only have a name, geocode it first.
   if (locationName && (!latitude || !longitude)) {
-      const suggestions = await getCitySuggestions(locationName);
+      const suggestions = await getCitySuggestions(locationName, 'en'); // Use a consistent language for robust geocoding
       if (suggestions.length > 0) {
           lat = suggestions[0].lat.toString();
           lon = suggestions[0].lon.toString();
@@ -106,7 +106,7 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
     }
 
     const weatherAPIData: OpenMeteoWeatherData = await weatherResponse.json();
-    const { daily: dailyData, hourly: hourlyData, current: currentData, timezone } = weatherAPIData;
+    const { daily: dailyData, hourly: hourlyData, current: currentData, timezone, latitude: apiLatitude } = weatherAPIData;
 
     // Process 6-day forecast (from tomorrow, so i=1 to i=6)
     const forecastData: DailyForecast[] = [];
@@ -189,6 +189,7 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
       },
       forecast: forecastData,
       hourly: todayHourlyForecast,
+      latitude: apiLatitude,
     };
 
     return { ...prevState, success: true, weatherData, message: '' };
@@ -214,7 +215,7 @@ export async function getCityName(lat: number, lon: number): Promise<string> {
   return getCityFromCoords(lat, lon);
 }
 
-export async function getCitySuggestions(query: string, language: string = 'en'): Promise<CitySuggestion[]> {
+export async function getCitySuggestions(query: string, language: string): Promise<CitySuggestion[]> {
   if (query.length < 3) {
     return [];
   }
@@ -259,5 +260,3 @@ export async function getCitySuggestions(query: string, language: string = 'en')
     return [];
   }
 }
-
-    

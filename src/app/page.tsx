@@ -10,6 +10,7 @@ import { useTranslation } from '@/hooks/use-translation';
 
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { ApiAttribution } from '@/components/layout/api-attribution';
 import { SearchControls } from '@/components/weather/search-controls';
 import { CurrentWeather as CurrentWeatherComponent } from '@/components/weather/current-weather';
 import { Forecast } from '@/components/weather/forecast';
@@ -28,8 +29,11 @@ const initialState: FormState = {
   success: false,
 };
 
-// This new type will hold the data for the main display card
-type DisplayWeather = (CurrentWeather | DailyForecast) & { dt: number | string };
+// This new type will hold the data for the main display card.
+// It must include all properties needed by child components.
+// We combine properties from CurrentWeather and DailyForecast.
+type DisplayWeather = CurrentWeather | (DailyForecast & Pick<CurrentWeather, 'location' | 'timezone'>);
+
 
 const parseDateString = (dt: string | number) => {
     const dtStr = String(dt);
@@ -45,7 +49,7 @@ const parseDateString = (dt: string | number) => {
 export default function Home() {
   const [state, formAction] = useActionState(getWeather, initialState);
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [displayData, setDisplayData] = useState<DisplayWeather | null>(null);
@@ -90,9 +94,11 @@ export default function Home() {
   const handleDaySelect = (day: DailyForecast) => {
     if (!weatherData) return;
   
+    // Create a complete DisplayWeather object for the selected forecast day
     const newDisplayData: DisplayWeather = {
       ...day,
-      location: weatherData.current.location,
+      // Inherit properties from the current weather data that are not in the daily forecast
+      location: weatherData.current.location, 
       timezone: weatherData.current.timezone,
     };
   
@@ -196,6 +202,9 @@ export default function Home() {
   }, [weatherData]);
 
   const dateForMoon = displayData ? parseDateString(displayData.dt) : null;
+  // Use the latitude from the central weatherData state to ensure it's always available
+  const latitudeForMoon = weatherData?.latitude;
+
 
   return (
     <>
@@ -224,7 +233,7 @@ export default function Home() {
         </form>
         <main className="flex-grow px-4 py-2">
             <div className="w-full max-w-4xl mx-auto mb-8 relative">
-              <SearchControls formAction={formAction} onRefreshLocation={handleRefreshLocation} />
+              <SearchControls formAction={formAction} onRefreshLocation={handleRefreshLocation} locale={locale} />
             </div>
           <div className="flex justify-center items-start h-full">
             {isLoading ? (
@@ -253,15 +262,16 @@ export default function Home() {
                     selectedDayId={selectedDayId}
                   />
                 </GlassCard>
-                {dateForMoon && !isNaN(dateForMoon.getTime()) && (
+                {dateForMoon && latitudeForMoon !== undefined && !isNaN(dateForMoon.getTime()) && (
                   <GlassCard className="lg:col-span-3" id="moon-calendar">
-                      <MoonCalendar date={dateForMoon} />
+                      <MoonCalendar date={dateForMoon} latitude={latitudeForMoon} />
                   </GlassCard>
                 )}
               </div>
             ) : null}
           </div>
         </main>
+        <ApiAttribution />
         <Footer />
       </div>
     </>
