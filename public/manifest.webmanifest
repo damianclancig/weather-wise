@@ -1,0 +1,16 @@
+{
+  "name": "WeatherWise",
+  "short_name": "WeatherWise",
+  "description": "Pronóstico del tiempo en tiempo real para cualquier ciudad del mundo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#192A56",
+  "theme_color": "#192A56",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
