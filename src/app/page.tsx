@@ -17,11 +17,18 @@ import { Forecast } from '@/components/weather/forecast';
 import { Loader, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { MoonCalendar } from '@/components/weather/moon-calendar';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 type FormState = {
   message: string;
   weatherData?: WeatherData;
   success: boolean;
+  errorDetail?: string; // Add this to hold technical error details
 };
 
 const initialState: FormState = {
@@ -57,7 +64,7 @@ export default function Home() {
   const [selectedDayId, setSelectedDayId] = useState<string | null>('today');
   
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FormState | null>(null);
   const [backgroundImage, setBackgroundImage] = useState<string>('');
   const [backgroundHeight, setBackgroundHeight] = useState<number | null>(null);
   
@@ -171,7 +178,7 @@ export default function Home() {
       if (state.message === 'noLocationProvided' && weatherData) {
          return;
       }
-      setError(state.message);
+      setError(state); // Store the entire state object on error
       toast({
         variant: "destructive",
         title: t('errorTitle'),
@@ -242,11 +249,21 @@ export default function Home() {
                 <p className="text-xl">{t('loading')}</p>
               </div>
             ) : error && !weatherData ? (
-                <GlassCard className="mt-20">
+                <GlassCard className="mt-20 p-6">
                   <div className="flex flex-col items-center justify-center text-destructive-foreground gap-4">
                     <AlertTriangle className="w-12 h-12 text-destructive" />
                     <h2 className="text-2xl font-bold">{t('errorTitle')}</h2>
-                    <p>{t(error)}</p>
+                    <p>{t(error.message)}</p>
+                    {error.errorDetail && (
+                       <Accordion type="single" collapsible className="w-full text-foreground/80">
+                         <AccordionItem value="item-1">
+                           <AccordionTrigger>Ver detalles técnicos</AccordionTrigger>
+                           <AccordionContent className="bg-black/20 p-2 rounded-md font-mono text-xs">
+                             {error.errorDetail}
+                           </AccordionContent>
+                         </AccordionItem>
+                       </Accordion>
+                    )}
                   </div>
                 </GlassCard>
             ) : weatherData && displayData ? (

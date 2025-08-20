@@ -61,53 +61,56 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
   const locationName = formData.get('location') as string;
   let latitude = formData.get('latitude') as string;
   let longitude = formData.get('longitude') as string;
-
-  if (!locationName && !(latitude && longitude)) {
-    return { ...prevState, success: false, message: 'noLocationProvided' };
-  }
   
-  let lat = latitude;
-  let lon = longitude;
-  let loc = locationName;
-
-  // If we only have a name, geocode it first.
-  if (locationName && (!latitude || !longitude)) {
-      const suggestions = await getCitySuggestions(locationName, 'en'); // Use a consistent language for robust geocoding
-      if (suggestions.length > 0) {
-          lat = suggestions[0].lat.toString();
-          lon = suggestions[0].lon.toString();
-          loc = suggestions[0].name;
-      } else {
-          return { ...prevState, success: false, message: 'fetchError' };
-      }
-  } else if (latitude && longitude && !locationName) {
-      loc = await getCityFromCoords(parseFloat(latitude), parseFloat(longitude));
-  }
-
-  const weatherParams = new URLSearchParams({
-    latitude: lat,
-    longitude: lon,
-    current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m",
-    hourly: "temperature_2m,precipitation_probability,weather_code",
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max",
-    timezone: "auto",
-    forecast_days: "7" // Fetch 7 days to have today + 6 days forecast
-  });
-  
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?${weatherParams}`;
-
   try {
+    if (!locationName && !(latitude && longitude)) {
+      return { ...prevState, success: false, message: 'noLocationProvided' };
+    }
+    
+    let lat = latitude;
+    let lon = longitude;
+    let loc = locationName;
+
+    // If we only have a name, geocode it first.
+    if (locationName && (!latitude || !longitude)) {
+        const suggestions = await getCitySuggestions(locationName, 'en'); // Use a consistent language for robust geocoding
+        if (suggestions.length > 0) {
+            lat = suggestions[0].lat.toString();
+            lon = suggestions[0].lon.toString();
+            loc = suggestions[0].name;
+        } else {
+            return { ...prevState, success: false, message: 'fetchError' };
+        }
+    } else if (latitude && longitude && !locationName) {
+        loc = await getCityFromCoords(parseFloat(latitude), parseFloat(longitude));
+    }
+
+    const weatherParams = new URLSearchParams({
+      latitude: lat,
+      longitude: lon,
+      current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m",
+      hourly: "temperature_2m,precipitation_probability,weather_code",
+      daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max",
+      timezone: "auto",
+      forecast_days: "7", // Fetch 7 days to have today + 6 days forecast
+    });
+    
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?${weatherParams}`;
     const weatherResponse = await fetch(weatherUrl, { next: { revalidate: 0 } });
 
     if (!weatherResponse.ok) {
       const errorData = await weatherResponse.json();
       console.error("API Error:", errorData.reason);
-      return { ...prevState, success: false, message: 'fetchError' };
+      return { ...prevState, success: false, message: 'fetchError', errorDetail: errorData.reason };
     }
 
     const weatherAPIData: OpenMeteoWeatherData = await weatherResponse.json();
     const { daily: dailyData, hourly: hourlyData, current: currentData, timezone, latitude: apiLatitude } = weatherAPIData;
 
+    if (!currentData) {
+        throw new Error("API response did not include 'current' weather data.");
+    }
+    
     // Process 6-day forecast (from tomorrow, so i=1 to i=6)
     const forecastData: DailyForecast[] = [];
     for (let i = 1; i <= 6; i++) {
@@ -159,13 +162,14 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
             pop: hourlyData.precipitation_probability[item.index],
             weatherCode: hourlyData.weather_code[item.index],
         }));
-
+    
+    // Process current weather from the 'current' object
     const isDay = currentData.is_day === 1;
 
     // Use hourly data for current pop, find the closest hour
     const now = new Date();
     const closestHourIndex = hourlyData.time.findIndex(
-      (timeStr) => new Date(timeStr).getTime() > now.getTime()
+      (timeStr) => new Date(timeStr).getTime() >= now.getTime()
     );
     const currentPop = hourlyData.precipitation_probability[closestHourIndex > 0 ? closestHourIndex -1 : 0];
 
@@ -186,17 +190,18 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
         sunset: dailyData.sunset[0],
         timezone: timezone,
         weatherCode: currentData.weather_code,
+        latitude: apiLatitude,
       },
       forecast: forecastData,
       hourly: todayHourlyForecast,
       latitude: apiLatitude,
     };
 
-    return { ...prevState, success: true, weatherData, message: '' };
+    return { ...prevState, success: true, weatherData, message: '', errorDetail: null };
 
-  } catch (error) {
-    console.error("Network or parsing error:", error);
-    return { ...prevState, success: false, message: 'fetchError' };
+  } catch (error: any) {
+    console.error("Error in getWeather:", error);
+    return { ...prevState, success: false, message: 'fetchError', errorDetail: error.message || 'An unknown error occurred.' };
   }
 }
 
@@ -260,3 +265,4 @@ export async function getCitySuggestions(query: string, language: string): Promi
     return [];
   }
 }
+

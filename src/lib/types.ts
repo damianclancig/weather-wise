@@ -105,7 +105,7 @@ export interface OpenMeteoWeatherData {
   timezone: string;
   timezone_abbreviation: string;
   elevation: number;
-  current: OpenMeteoCurrent;
+  current?: OpenMeteoCurrent; // Current can now be optional
   hourly: OpenMeteoHourly;
   daily: OpenMeteoDaily;
 }

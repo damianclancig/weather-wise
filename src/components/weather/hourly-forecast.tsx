@@ -82,7 +82,8 @@ export function HourlyForecast({ data, sunrise, sunset, timezone }: HourlyForeca
   timelineEvents.sort((a, b) => a.dt - b.dt);
   
   const now = new Date().getTime();
-  const currentEventIndex = timelineEvents.findIndex(event => event.type === 'hour' && event.dt >= now);
+  // Find the index of the last hourly event that is less than or equal to the current time.
+  const currentEventIndex = timelineEvents.findLastIndex(event => event.type === 'hour' && event.dt <= now);
 
 
   return (
