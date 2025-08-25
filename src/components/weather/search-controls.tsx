@@ -60,16 +60,11 @@ export function SearchControls({ formAction, onRefreshLocation, locale }: Search
   
   const handleRefresh = () => {
     setQuery('');
+    setShowSuggestions(false);
     onRefreshLocation();
   }
 
   const handleFormAction = (formData: FormData) => {
-      // Clear latitude and longitude if only a text search is performed
-      const latInput = formRef.current?.elements.namedItem('latitude') as HTMLInputElement;
-      const lonInput = formRef.current?.elements.namedItem('longitude') as HTMLInputElement;
-      if(latInput) latInput.value = '';
-      if(lonInput) lonInput.value = '';
-
       formAction(formData);
       setQuery('');
       setShowSuggestions(false);
@@ -84,6 +79,7 @@ export function SearchControls({ formAction, onRefreshLocation, locale }: Search
 
     const debounceTimeout = setTimeout(async () => {
       const newSuggestions = await getCitySuggestions(query, locale);
+      console.log('[City Suggestions Response]:', newSuggestions);
       setSuggestions(newSuggestions);
       setShowSuggestions(newSuggestions.length > 0);
     }, 300);

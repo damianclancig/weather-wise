@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useActionState, useRef } from 'react';
 
 import type { WeatherData, DailyForecast, CurrentWeather, HourlyForecast } from '@/lib/types';
-import { getWeather, getCityName, generateAndSetBackground } from '@/app/actions';
+import { getWeather, generateAndSetBackground } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -17,7 +17,6 @@ import { Forecast } from '@/components/weather/forecast';
 import { Loader, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { MoonCalendar } from '@/components/weather/moon-calendar';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Accordion,
   AccordionContent,
@@ -31,7 +30,7 @@ type FormState = {
   message: string;
   weatherData?: WeatherData;
   success: boolean;
-  errorDetail?: string; // Add this to hold technical error details
+  errorDetail?: string;
 };
 
 const initialState: FormState = {
@@ -77,7 +76,7 @@ export default function Home() {
     setCurrentDate(new Date());
   }, []);
 
-  const submitInitialForm = useCallback((lat?: number, lon?: number, loc?: string) => {
+  const submitInitialForm = useCallback(async (lat?: number, lon?: number) => {
     if (initialFetchFormRef.current) {
         const form = initialFetchFormRef.current;
         const latInput = form.elements.namedItem('latitude') as HTMLInputElement;
@@ -85,14 +84,16 @@ export default function Home() {
         const locInput = form.elements.namedItem('location') as HTMLInputElement;
 
         if (lat && lon) {
-          if (latInput) latInput.value = lat.toString();
-          if (lonInput) lonInput.value = lon.toString();
-          if (locInput && loc) locInput.value = loc;
+          // New flow with BigDataCloud
+          latInput.value = lat.toString();
+          lonInput.value = lon.toString();
+          // We leave location empty, the server will figure it out
+          locInput.value = '';
         } else {
           // Fallback to a default location if geolocation fails
-          if (latInput) latInput.value = '40.71';
-          if (lonInput) lonInput.value = '-74.01';
-          if (locInput) locInput.value = 'New York';
+          locInput.value = 'New York';
+          latInput.value = '';
+          lonInput.value = '';
         }
         
         form.requestSubmit();
@@ -129,10 +130,9 @@ export default function Home() {
   const handleRefreshLocation = useCallback(() => {
     setIsLoading(true);
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const { latitude, longitude } = position.coords;
-        const cityName = await getCityName(latitude, longitude);
-        submitInitialForm(latitude, longitude, cityName);
+        submitInitialForm(latitude, longitude);
       },
       (error) => {
         setIsLoading(false);
@@ -150,10 +150,9 @@ export default function Home() {
     isInitialFetchDone.current = true;
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const { latitude, longitude } = position.coords;
-        const cityName = await getCityName(latitude, longitude);
-        submitInitialForm(latitude, longitude, cityName);
+        submitInitialForm(latitude, longitude);
       },
       () => {
         toast({
@@ -241,7 +240,7 @@ export default function Home() {
             <input type="hidden" name="longitude" />
             <input type="hidden" name="location" />
         </form>
-        <main className="w-full flex-grow px-4 py-8 flex flex-col items-center justify-center" onClick={toggleContent}>
+        <main className="w-full flex-grow px-4 py-8 flex flex-col justify-center" onClick={toggleContent}>
            <div className={cn(
              "w-full",
              !contentVisible && "hidden"
@@ -276,7 +275,7 @@ export default function Home() {
               ) : weatherData && displayData ? (
                 <div className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
                   <GlassCard className="lg:col-span-3" id="current-weather">
-                    <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} />
+                    <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} locale={locale} />
                   </GlassCard>
                   <GlassCard className="lg:col-span-3" id="forecast">
                     <Forecast 

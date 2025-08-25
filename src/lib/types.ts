@@ -6,6 +6,7 @@ export interface CurrentWeather {
   feels_like: number;
   humidity: number;
   wind_speed: number;
+  wind_direction: number;
   description: string;
   main: string;
   pop: number; // Probability of precipitation
@@ -29,6 +30,7 @@ export interface DailyForecast {
   hourly: HourlyForecast[]; 
   humidity: number;
   wind_speed: number;
+  wind_direction: number;
   temp: number;
   feels_like: number;
   weatherCode: number;
@@ -78,6 +80,7 @@ export interface OpenMeteoCurrent {
   is_day: number;
   weather_code: number;
   wind_speed_10m: number;
+  wind_direction_10m: number;
 }
 
 export interface OpenMeteoHourly {
@@ -95,6 +98,8 @@ export interface OpenMeteoDaily {
   sunrise: string[];
   sunset: string[];
   precipitation_probability_max: number[];
+  wind_speed_10m_max: number[];
+  wind_direction_10m_dominant: number[];
 }
 
 export interface OpenMeteoWeatherData {

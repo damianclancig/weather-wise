@@ -30,9 +30,9 @@ function fromJulian(jd: number): Date {
   return date;
 }
 
-function getMoonInfo(currentDate: Date): { phaseName: string; illumination: number } {
+function getMoonInfo(currentDate: Date): { phaseName: string; illumination: number, age: number } {
   if (!currentDate || isNaN(currentDate.getTime())) {
-    return { phaseName: 'new_moon', illumination: 0 };
+    return { phaseName: 'new_moon', illumination: 0, age: 0 };
   }
   const currentJD = toJulian(currentDate);
   const age = (currentJD - KNOWN_NEW_MOON_JD) % SYNODIC_MONTH;
@@ -43,7 +43,8 @@ function getMoonInfo(currentDate: Date): { phaseName: string; illumination: numb
   
   return {
     phaseName: PHASES[phaseIndex],
-    illumination: Math.round(illumination * 100)
+    illumination: Math.round(illumination * 100),
+    age: age
   };
 }
 
@@ -80,64 +81,74 @@ function getUpcomingMajorPhases(currentDate: Date): { name: string; date: Date }
 const PhaseIcon = ({ phaseName, latitude }: { phaseName: string, latitude: number }) => {
   const isSouthernHemisphere = latitude < 0;
 
-  const iconMap: Record<string, JSX.Element> = {
-    new_moon: <circle key="nm" cx="12" cy="12" r="10" fill="black" stroke="currentColor" strokeWidth="0.5" />,
-    first_quarter: <path key="fq" d="M12 2 a 10 10 0 0 1 0 20 V2z" fill="currentColor" />,
-    full_moon: <circle key="fm" cx="12" cy="12" r="10" fill="currentColor" />,
-    third_quarter: <path key="tq" d="M12 2 a 10 10 0 0 0 0 20 V2z" fill="currentColor" />,
-  };
+  let path;
+  // For major phases, we flip the quarter moon drawing
+  switch (phaseName) {
+      case 'new_moon':
+          path = <circle cx="12" cy="12" r="10" fill="black" stroke="currentColor" strokeWidth="0.5" />;
+          break;
+      case 'first_quarter':
+          // In the South, first quarter looks like a "D" shape on the left
+          path = <path d={isSouthernHemisphere ? "M12 2 a 10 10 0 0 0 0 20 V2z" : "M12 2 a 10 10 0 0 1 0 20 V2z"} fill="currentColor" />;
+          break;
+      case 'full_moon':
+          path = <circle cx="12" cy="12" r="10" fill="currentColor" />;
+          break;
+      case 'third_quarter':
+           // In the South, third quarter looks like a "D" shape on the right
+          path = <path d={isSouthernHemisphere ? "M12 2 a 10 10 0 0 1 0 20 V2z" : "M12 2 a 10 10 0 0 0 0 20 V2z"} fill="currentColor" />;
+          break;
+      default: // Should not happen for major phases
+          path = <circle cx="12" cy="12" r="10" fill="black" stroke="currentColor" strokeWidth="0.5" />;
+          break;
+  }
+  
   return (
-    <svg viewBox="0 0 24 24" className="w-8 h-8 text-foreground/80" style={{ transform: isSouthernHemisphere ? 'rotate(180deg)' : 'none' }}>
-      {iconMap[phaseName] || iconMap.new_moon}
-    </svg>
+      <svg viewBox="0 0 24 24" className="w-8 h-8 text-foreground/80">
+          {path}
+      </svg>
   );
 };
 
-const CurrentMoonIcon = ({ phaseName, illumination, latitude }: { phaseName: string; illumination: number; latitude: number }) => {
-  const isWaxing = phaseName?.includes('waxing') || phaseName === 'first_quarter';
-  const isSouthernHemisphere = latitude < 0;
-  
-  const r = 10;
-  const cx = 12;
-  const cy = 12;
-  
-  let path;
-  if (!phaseName || phaseName === 'new_moon') {
-      path = <circle cx={cx} cy={cy} r={r} fill="black" stroke="currentColor" strokeWidth="0.5" />;
-  } else if (phaseName === 'full_moon') {
-      path = <circle cx={cx} cy={cy} r={r} fill="currentColor" />;
-  } else if (phaseName === 'first_quarter') {
-      path = <path d={`M12 2 a ${r} ${r} 0 0 1 0 ${2*r} V 2 Z`} fill="currentColor" />;
-  } else if (phaseName === 'third_quarter') {
-      path = <path d={`M12 2 a ${r} ${r} 0 0 0 0 ${2*r} V 2 Z`} fill="currentColor" />;
-  } else {
-      const isGibbous = phaseName.includes('gibbous');
-      // Flip the sweep flag for Southern Hemisphere to reverse the direction of the crescent
-      const sweepFlag = isWaxing ? 1 : 0;
-      const largeArcFlag = isGibbous ? 1 : 0;
-      
-      const xRadius = r * Math.abs(1 - (illumination / 50));
-      
-      const start = `M12,2`;
-      const arc1 = `A ${r} ${r} 0 ${largeArcFlag} ${sweepFlag} 12,22`;
-      const arc2 = `A ${xRadius} ${r} 0 ${largeArcFlag} ${sweepFlag === 1 ? 0 : 1} 12,2`;
 
-      path = <path d={`${start} ${arc1} ${arc2} Z`} fill="currentColor" />;
-  }
+const CurrentMoonIcon = ({ age, latitude }: { age: number; latitude: number }) => {
+    const isSouthernHemisphere = latitude < 0;
+    const phase = age / SYNODIC_MONTH; // Progress from 0 (new) to 1 (new)
+    
+    // Constants for our SVG
+    const cx = 12, cy = 12, r = 10;
 
-  return (
-    <svg viewBox="0 0 24 24" className="w-24 h-24 text-foreground" style={{ transform: isSouthernHemisphere ? 'rotate(180deg)' : 'none' }}>
-      <defs>
-        <mask id="moon-mask">
-          <circle cx={cx} cy={cy} r={r} fill="white" />
-        </mask>
-      </defs>
-      <g mask="url(#moon-mask)">
-        <circle cx={cx} cy={cy} r={r} fill="black" stroke="white" strokeWidth="0.5" />
-        {path}
-      </g>
-    </svg>
-  );
+    // The angle of the terminator (the line between light and shadow)
+    const angle = phase * 2 * Math.PI;
+    
+    // The x-radius of the ellipse that forms the terminator
+    // It's `r` at full/new moon and `0` at quarter moons
+    const terminatorXRadius = r * Math.cos(angle);
+
+    // Determine the sweep-flag for the SVG arc path. This controls the curve's direction.
+    // For waxing phases (0 to 0.5), we draw the lit part. For waning (0.5 to 1), we draw the lit part.
+    const sweepFlag = phase < 0.5 ? 1 : 0;
+    
+    // The core logic: A single path that draws the lit portion.
+    // It starts at the top of the moon, draws a half-circle, then draws the terminator ellipse back to the top.
+    const path = `
+        M ${cx}, ${cy - r}
+        A ${r},${r} 0 1,${sweepFlag} ${cx},${cy + r}
+        A ${terminatorXRadius},${r} 0 1,${sweepFlag} ${cx},${cy - r}
+        Z
+    `;
+
+    // For the southern hemisphere, we simply flip the entire SVG horizontally.
+    const transform = isSouthernHemisphere ? 'scale(-1, 1) translate(-24, 0)' : '';
+
+    return (
+        <svg viewBox="0 0 24 24" className="w-24 h-24 text-foreground">
+            <g transform={transform}>
+                <circle cx={cx} cy={cy} r={r} fill="black" stroke="white" strokeWidth="0.2" />
+                <path d={path} fill="currentColor" />
+            </g>
+        </svg>
+    );
 };
 
 
@@ -159,7 +170,7 @@ export function MoonCalendar({ date, latitude }: MoonCalendarProps) {
       
       {/* Current Moon Phase Display */}
       <div className="flex flex-col items-center justify-center text-center gap-2 mb-6">
-          <CurrentMoonIcon phaseName={currentPhase.phaseName} illumination={currentPhase.illumination} latitude={latitude} />
+          <CurrentMoonIcon age={currentPhase.age} latitude={latitude} />
           <p className="text-lg font-semibold capitalize">{t(`moon.${currentPhase.phaseName}`)}</p>
           <p className="text-sm text-foreground/80">{t('illumination', {percent: currentPhase.illumination})}</p>
       </div>

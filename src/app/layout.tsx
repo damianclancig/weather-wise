@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   description: 'Aplicación del tiempo con pronósticos precisos, búsqueda multilingüe y fondos espectaculares generados por IA (Gemini) que reflejan el clima actual.',
   metadataBase: APP_URL,
   applicationName: 'WeatherWise',
-  keywords: ['clima', 'tiempo', 'pronóstico', 'temperatura', 'weather', 'forecast', 'ia', 'ai', 'inteligencia artificial', 'gemini', 'multilenguaje', 'multi-idioma'],
+  keywords: ['clima', 'tiempo', 'pronóstico', 'temperatura', 'weather', 'forecast', 'ia', 'ai', 'inteligencia artificial', 'gemini', 'multilenguaje', 'multi-idioma', 'fases lunares', 'direccion del viento'],
   authors: [{ name: 'Clancig', url: new URL('https://github.com/damianclancig/weather-wise') }],
   creator: 'Clancig',
   openGraph: {

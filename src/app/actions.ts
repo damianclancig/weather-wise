@@ -45,52 +45,65 @@ const getDominantWeatherCode = (hourlyCodes: number[]): number => {
 };
 
 export async function getCityFromCoords(lat: number, lon: number): Promise<string> {
-  const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
-  try {
-    const response = await fetch(geoUrl);
-    if (!response.ok) return "Current Location";
-    const data = await response.json();
-    return `${data.city}, ${data.countryCode}`;
-  } catch (error) {
-    return "Current Location";
-  }
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`;
+    try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) {
+            return "Current Location";
+        }
+        const data = await res.json();
+        
+        // New logic to find the most specific administrative name
+        const mostSpecificAdmin = data.localityInfo?.administrative?.sort((a: any, b: any) => b.order - a.order)[0];
+        
+        const city = mostSpecificAdmin?.name || data.city || data.locality || data.principalSubdivision || "Current Location";
+
+        return city;
+    } catch (error: any) {
+        console.error(`[getCityFromCoords] CATCH BLOCK ERROR: ${error.message}`);
+        return "Current Location";
+    }
 }
 
 // This function now fetches data from the Open-Meteo API.
 export async function getWeather(prevState: any, formData: FormData): Promise<any> {
-  const locationName = formData.get('location') as string;
-  let latitude = formData.get('latitude') as string;
-  let longitude = formData.get('longitude') as string;
+  let locationName = formData.get('location') as string | null;
+  let latitude = formData.get('latitude') as string | null;
+  let longitude = formData.get('longitude') as string | null;
   
   try {
-    if (!locationName && !(latitude && longitude)) {
-      return { ...prevState, success: false, message: 'noLocationProvided' };
-    }
     
-    let lat = latitude;
-    let lon = longitude;
-    let loc = locationName;
-
-    // If we only have a name, geocode it first.
-    if (locationName && (!latitude || !longitude)) {
-        const suggestions = await getCitySuggestions(locationName, 'en'); // Use a consistent language for robust geocoding
+    // Case 1: Search by name (locationName is present, lat/lon are not)
+    if (locationName && !latitude && !longitude) {
+        const suggestions = await getCitySuggestions(locationName, 'en', 1);
         if (suggestions.length > 0) {
-            lat = suggestions[0].lat.toString();
-            lon = suggestions[0].lon.toString();
-            loc = suggestions[0].name;
+            latitude = suggestions[0].lat.toString();
+            longitude = suggestions[0].lon.toString();
+            locationName = suggestions[0].name; // Use the precise name from the API
         } else {
-            return { ...prevState, success: false, message: 'fetchError' };
+            const errorDetail = `Could not find city: ${locationName}`;
+            return { ...prevState, success: false, message: 'fetchError', errorDetail };
         }
-    } else if (latitude && longitude && !locationName) {
-        loc = await getCityFromCoords(parseFloat(latitude), parseFloat(longitude));
+    } 
+    // Case 2: Geolocation search (lat/lon are present, locationName may or may not be)
+    else if (latitude && longitude) {
+        if (!locationName) {
+           locationName = await getCityFromCoords(parseFloat(latitude), parseFloat(longitude));
+        }
+    } 
+    // Case 3: No data provided
+    else {
+        const errorDetail = 'No location information provided.';
+        return { ...prevState, success: false, message: 'fetchError', errorDetail };
     }
+
 
     const weatherParams = new URLSearchParams({
-      latitude: lat,
-      longitude: lon,
-      current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m",
+      latitude: latitude!,
+      longitude: longitude!,
+      current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m,wind_direction_10m",
       hourly: "temperature_2m,precipitation_probability,weather_code",
-      daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max",
+      daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant",
       timezone: "auto",
       forecast_days: "7", // Fetch 7 days to have today + 6 days forecast
     });
@@ -100,15 +113,17 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
 
     if (!weatherResponse.ok) {
       const errorData = await weatherResponse.json();
-      console.error("API Error:", errorData.reason);
-      return { ...prevState, success: false, message: 'fetchError', errorDetail: errorData.reason };
+      const errorDetail = `API Error: ${errorData.reason}`;
+      return { ...prevState, success: false, message: 'fetchError', errorDetail };
     }
 
     const weatherAPIData: OpenMeteoWeatherData = await weatherResponse.json();
+
     const { daily: dailyData, hourly: hourlyData, current: currentData, timezone, latitude: apiLatitude } = weatherAPIData;
 
     if (!currentData) {
-        throw new Error("API response did not include 'current' weather data.");
+        const errorDetail = "API response did not include 'current' weather data.";
+        throw new Error(errorDetail);
     }
     
     // Process 6-day forecast (from tomorrow, so i=1 to i=6)
@@ -116,7 +131,6 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
     for (let i = 1; i <= 6; i++) {
         const forecastDateStr = dailyData.time[i]; // e.g. "2024-07-30"
         
-        // Filter hourly data for the current forecast day
         const dayHourlyData = hourlyData.time
             .map((t, index) => ({ time: t, index })) // Keep original index
             .filter(item => item.time.startsWith(forecastDateStr))
@@ -139,10 +153,11 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
             description: getWeatherDescriptionFromCode(dominantCode),
             pop: dailyData.precipitation_probability_max[i],
             hourly: dayHourlyData,
-            humidity: 0, 
-            wind_speed: 0, 
+            humidity: 0, // Not available in daily forecast, would need to average hourly
+            wind_speed: dailyData.wind_speed_10m_max[i], 
+            wind_direction: dailyData.wind_direction_10m_dominant[i],
             temp: Math.round((dailyData.temperature_2m_max[i] + dailyData.temperature_2m_min[i]) / 2),
-            feels_like: Math.round((dailyData.temperature_2m_max[i] + dailyData.temperature_2m_min[i]) / 2),
+            feels_like: Math.round((dailyData.temperature_2m_max[i] + dailyData.temperature_2m_min[i]) / 2), // Approximation
             weatherCode: dominantCode,
             sunrise: dailyData.sunrise[i],
             sunset: dailyData.sunset[i],
@@ -175,11 +190,12 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
 
     const weatherData: WeatherData = {
       current: {
-        location: loc,
+        location: locationName as string,
         temp: currentData.temperature_2m,
         feels_like: currentData.apparent_temperature,
         humidity: currentData.relative_humidity_2m,
         wind_speed: currentData.wind_speed_10m,
+        wind_direction: currentData.wind_direction_10m,
         description: getWeatherDescriptionFromCode(currentData.weather_code, isDay),
         main: getMainWeatherFromCode(currentData.weather_code),
         pop: currentPop,
@@ -196,12 +212,13 @@ export async function getWeather(prevState: any, formData: FormData): Promise<an
       hourly: todayHourlyForecast,
       latitude: apiLatitude,
     };
-
+    
     return { ...prevState, success: true, weatherData, message: '', errorDetail: null };
 
   } catch (error: any) {
-    console.error("Error in getWeather:", error);
-    return { ...prevState, success: false, message: 'fetchError', errorDetail: error.message || 'An unknown error occurred.' };
+    const errorDetail = error.message || 'An unknown error occurred.';
+    console.error(`[getWeather] CATCH BLOCK ERROR: ${errorDetail}`);
+    return { ...prevState, success: false, message: 'fetchError', errorDetail };
   }
 }
 
@@ -215,39 +232,36 @@ export async function generateAndSetBackground(input: GenerateBackgroundInput): 
     }
 }
 
-
-export async function getCityName(lat: number, lon: number): Promise<string> {
-  return getCityFromCoords(lat, lon);
-}
-
-export async function getCitySuggestions(query: string, language: string): Promise<CitySuggestion[]> {
+export async function getCitySuggestions(query: string, language: string, count: number = 5): Promise<CitySuggestion[]> {
   if (query.length < 3) {
     return [];
   }
 
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&format=json&language=${language}`;
-
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=${count}&format=json&language=${language}`;
+  
   try {
     const response = await fetch(url);
     if (!response.ok) {
       return [];
     }
     const data = await response.json();
-    
-    if (!data.results) return [];
 
-    // Map to our CitySuggestion type and remove duplicates
+    const results = data.results || [];
+
+    if (!results || results.length === 0) return [];
+
     const suggestions: CitySuggestion[] = [];
     const seen = new Set<string>();
 
-    data.results.forEach((item: any) => {
-      // The name can be composed of name, admin1 (state/province), and country
-      // Let's create a more descriptive name, but keep it clean
+    results.forEach((item: any) => {
       let name = item.name;
       if (item.admin1 && item.name !== item.admin1) {
           name += `, ${item.admin1}`;
       }
-      name += `, ${item.country}`;
+      if (item.country) {
+          name += `, ${item.country}`;
+      }
+
 
       if (!seen.has(name)) {
         suggestions.push({
@@ -261,8 +275,7 @@ export async function getCitySuggestions(query: string, language: string): Promi
 
     return suggestions;
   } catch (error) {
-    console.error("Error fetching city suggestions:", error);
+    console.error("[getCitySuggestions] Error fetching city suggestions:", error);
     return [];
   }
 }
-

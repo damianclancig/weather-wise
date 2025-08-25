@@ -2,26 +2,29 @@
 'use client';
 
 import type { CurrentWeather as CurrentWeatherType, DailyForecast, HourlyForecast as HourlyForecastType } from '@/lib/types';
+import type { Locale } from '@/lib/i18n';
 import { useTranslation } from '@/hooks/use-translation';
 import { AnimatedWeatherIcon } from '@/components/icons/animated-weather-icon';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { Thermometer, Droplets, Wind, MapPin, Umbrella } from 'lucide-react';
 import { SunriseSunset } from './sunrise-sunset';
 import { DetailItem } from './detail-item';
+import { WindArrow } from './wind-arrow';
 
 
 // This new type will hold the data for the main display card.
 // It must include all properties needed by child components.
 // We combine properties from CurrentWeather and DailyForecast.
-type DisplayWeather = CurrentWeatherType | (DailyForecast & Pick<CurrentWeatherType, 'location' | 'timezone' | 'latitude'>);
+type DisplayWeather = (CurrentWeatherType | DailyForecast) & { location: string; timezone: string, latitude: number };
 
 
 interface CurrentWeatherProps {
   data: DisplayWeather;
   hourlyData: HourlyForecastType[];
+  locale: Locale;
 }
 
-export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
+export function CurrentWeather({ data, hourlyData, locale }: CurrentWeatherProps) {
   const { t } = useTranslation();
   
   const weatherDescriptionKey = `weather.${data.description}`;
@@ -114,9 +117,14 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
           value={`${data.humidity}%`}
         />
          <DetailItem
-          icon={Wind}
-          label={t('wind')}
-          value={`${Math.round(data.wind_speed)} km/h`}
+            icon={Wind}
+            label={t('wind')}
+            value={
+                <div className="flex items-center justify-center gap-2">
+                    <span>{`${Math.round(data.wind_speed)} km/h`}</span>
+                    {data.wind_speed > 0 && <WindArrow degrees={data.wind_direction} locale={locale} />}
+                </div>
+            }
         />
         <DetailItem
           icon={Umbrella}

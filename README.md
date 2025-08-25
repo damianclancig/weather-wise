@@ -14,12 +14,13 @@ La aplicación detecta automáticamente la ubicación del usuario para proporcio
 ## ✨ Características
 
 - **Fondos Generados por IA:** Imágenes de fondo espectaculares y únicas, creadas en tiempo real por Google Gemini, que representan visualmente el clima y la ubicación buscada.
-- **Datos Meteorológicos en Tiempo Real:** Obtén información actualizada al minuto sobre temperatura, sensación térmica, humedad, velocidad del viento y probabilidad de precipitación.
+- **Datos Meteorológicos en Tiempo Real:** Obtén información actualizada al minuto sobre temperatura, sensación térmica, humedad, velocidad y dirección del viento, y probabilidad de precipitación.
 - **Geolocalización:** Obtiene automáticamente el clima de tu ubicación actual al cargar la página.
 - **Búsqueda Multilingüe con Autocompletado:** Encuentra fácilmente cualquier ciudad del mundo. Puedes buscar "London", "Londres" o "Londra" y la aplicación entenderá tu búsqueda gracias a la detección de idioma.
 - **Pronóstico a 6 Días:** Planifica con antelación con un pronóstico detallado. Al seleccionar un día, la tarjeta principal se actualiza con la información completa de esa fecha.
 - **Pronóstico por Horas:** Visualiza el pronóstico para las próximas horas en un carrusel interactivo dentro de la tarjeta principal.
-- **Fases de la Luna:** Consulta la fase lunar actual y las fechas de las próximas fases principales.
+- **Fases de la Luna:** Consulta la fase lunar actual, su porcentaje de iluminación y las fechas de las próximas fases principales, con un icono que se ajusta al hemisferio norte o sur.
+- **Dirección del Viento:** Un indicador visual muestra la dirección del viento con una flecha y la abreviatura cardinal localizada (N, SO, E, etc.).
 - **Diseño Receptivo:** Una interfaz totalmente receptiva que se ve genial en computadoras de escritorio, tabletas y dispositivos móviles.
 - **Interfaz de Usuario Dinámica:** Incluye iconos meteorológicos animados para cada condición climática y un moderno diseño de "tarjeta de cristal".
 - **Soporte Multilingüe:** Interfaz disponible en inglés, español y portugués, que se adapta al idioma del navegador.
