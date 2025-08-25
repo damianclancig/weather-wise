@@ -8,6 +8,7 @@ import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { Thermometer, Droplets, Wind, MapPin, Umbrella } from 'lucide-react';
 import { SunriseSunset } from './sunrise-sunset';
 import { DetailItem } from './detail-item';
+import { parseDateString } from '@/lib/date-utils';
 
 
 // This new type will hold the data for the main display card.
@@ -25,16 +26,6 @@ export function CurrentWeather({ data, hourlyData }: CurrentWeatherProps) {
   const { t } = useTranslation();
   
   const weatherDescriptionKey = `weather.${data.description}`;
-
-  const parseDateString = (dt: string | number) => {
-    // If it's just a date 'YYYY-MM-DD', replace dashes to avoid UTC parsing issues.
-    // If it's a full ISO string, it can be parsed directly.
-    const dtStr = String(dt);
-    if (!dtStr.includes('T')) {
-      return new Date(dtStr.replace(/-/g, '/'));
-    }
-    return new Date(dtStr);
-  }
 
   const date = parseDateString(data.dt);
   
