@@ -23,6 +23,7 @@ La aplicación detecta automáticamente la ubicación del usuario para proporcio
 - **Diseño Receptivo:** Una interfaz totalmente receptiva que se ve genial en computadoras de escritorio, tabletas y dispositivos móviles.
 - **Interfaz de Usuario Dinámica:** Incluye iconos meteorológicos animados para cada condición climática y un moderno diseño de "tarjeta de cristal".
 - **Soporte Multilingüe:** Interfaz disponible en inglés, español y portugués, que se adapta al idioma del navegador.
+- **Huevo de Pascua Oculto:** ¡Descubre una función secreta para una experiencia más inmersiva!
 
 ---
 

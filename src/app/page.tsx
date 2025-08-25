@@ -17,12 +17,15 @@ import { Forecast } from '@/components/weather/forecast';
 import { Loader, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { MoonCalendar } from '@/components/weather/moon-calendar';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { cn } from '@/lib/utils';
+
 
 type FormState = {
   message: string;
@@ -39,19 +42,7 @@ const initialState: FormState = {
 // This new type will hold the data for the main display card.
 // It must include all properties needed by child components.
 // We combine properties from CurrentWeather and DailyForecast.
-type DisplayWeather = CurrentWeather | (DailyForecast & Pick<CurrentWeather, 'location' | 'timezone'>);
-
-
-const parseDateString = (dt: string | number) => {
-    const dtStr = String(dt);
-    // If it's just a date 'YYYY-MM-DD', replace dashes to avoid UTC parsing issues.
-    // If it's a full ISO string, it can be parsed directly.
-    if (!dtStr.includes('T')) {
-      return new Date(dtStr.replace(/-/g, '/'));
-    }
-    return new Date(dtStr);
-};
-
+type DisplayWeather = CurrentWeather | (DailyForecast & Pick<CurrentWeather, 'location' | 'timezone' | 'latitude'>);
 
 export default function Home() {
   const [state, formAction] = useActionState(getWeather, initialState);
@@ -66,14 +57,24 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<FormState | null>(null);
   const [backgroundImage, setBackgroundImage] = useState<string>('');
-  const [backgroundHeight, setBackgroundHeight] = useState<number | null>(null);
   
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  const [contentVisible, setContentVisible] = useState(true);
+
   const initialFetchFormRef = useRef<HTMLFormElement>(null);
   const isInitialFetchDone = useRef(false);
 
+  const toggleContent = (e: React.MouseEvent<HTMLElement>) => {
+    // Only trigger if the click is on the background itself, not on its children
+    if (e.target === e.currentTarget) {
+       setContentVisible(prev => !prev);
+    }
+  };
+
+
   useEffect(() => {
-    // Set the background height once on component mount, adding 20% to ensure it covers the full scroll length
-    setBackgroundHeight(window.innerHeight * 1.2);
+    // Set the current date once on component mount
+    setCurrentDate(new Date());
   }, []);
 
   const submitInitialForm = useCallback((lat?: number, lon?: number, loc?: string) => {
@@ -107,6 +108,7 @@ export default function Home() {
       // Inherit properties from the current weather data that are not in the daily forecast
       location: weatherData.current.location, 
       timezone: weatherData.current.timezone,
+      latitude: weatherData.current.latitude
     };
   
     setDisplayData(newDisplayData);
@@ -208,8 +210,6 @@ export default function Home() {
     }
   }, [weatherData]);
 
-  const dateForMoon = displayData ? parseDateString(displayData.dt) : null;
-  // Use the latitude from the central weatherData state to ensure it's always available
   const latitudeForMoon = weatherData?.latitude;
 
 
@@ -217,75 +217,83 @@ export default function Home() {
     <>
       {/* Background Layer */}
       <div 
-        className="fixed inset-x-0 top-0 z-[-1] bg-background"
-        style={{ height: backgroundHeight ? `${backgroundHeight}px` : '100vh' }}
+        className="fixed inset-0 z-[-1] bg-background"
       >
-        {backgroundImage && (
+        {backgroundImage ? (
           <img
             src={backgroundImage}
             alt="Generated weather background"
             className="h-full w-full object-cover transition-opacity duration-1000 ease-in-out"
           />
+        ) : (
+          <div className="h-full w-full bg-background" />
         )}
         <div className="absolute inset-0 bg-black/50" />
       </div>
 
       {/* Content Layer */}
-      <div className="relative z-0 flex min-h-screen flex-col">
+      <div className={cn(
+          "relative z-0 flex min-h-screen flex-col"
+      )}>
         <Header />
           <form ref={initialFetchFormRef} action={formAction} className="hidden">
             <input type="hidden" name="latitude" />
             <input type="hidden" name="longitude" />
             <input type="hidden" name="location" />
         </form>
-        <main className="flex-grow px-4 py-2">
+        <main className="w-full flex-grow px-4 py-8 flex flex-col items-center justify-center" onClick={toggleContent}>
+           <div className={cn(
+             "w-full",
+             !contentVisible && "hidden"
+           )}>
             <div className="w-full max-w-4xl mx-auto mb-8 relative">
               <SearchControls formAction={formAction} onRefreshLocation={handleRefreshLocation} locale={locale} />
             </div>
-          <div className="flex justify-center items-start h-full">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center text-foreground/80 gap-4 mt-20">
-                <Loader className="w-12 h-12 animate-spin" />
-                <p className="text-xl">{t('loading')}</p>
-              </div>
-            ) : error && !weatherData ? (
-                <GlassCard className="mt-20 p-6">
-                  <div className="flex flex-col items-center justify-center text-destructive-foreground gap-4">
-                    <AlertTriangle className="w-12 h-12 text-destructive" />
-                    <h2 className="text-2xl font-bold">{t('errorTitle')}</h2>
-                    <p>{t(error.message)}</p>
-                    {error.errorDetail && (
-                       <Accordion type="single" collapsible className="w-full text-foreground/80">
-                         <AccordionItem value="item-1">
-                           <AccordionTrigger>Ver detalles técnicos</AccordionTrigger>
-                           <AccordionContent className="bg-black/20 p-2 rounded-md font-mono text-xs">
-                             {error.errorDetail}
-                           </AccordionContent>
-                         </AccordionItem>
-                       </Accordion>
-                    )}
-                  </div>
-                </GlassCard>
-            ) : weatherData && displayData ? (
-              <div className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
-                <GlassCard className="lg:col-span-3" id="current-weather">
-                  <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} />
-                </GlassCard>
-                <GlassCard className="lg:col-span-3" id="forecast">
-                  <Forecast 
-                    data={weatherData.forecast} 
-                    onDaySelect={handleDaySelect} 
-                    onShowToday={handleShowToday}
-                    selectedDayId={selectedDayId}
-                  />
-                </GlassCard>
-                {dateForMoon && latitudeForMoon !== undefined && !isNaN(dateForMoon.getTime()) && (
-                  <GlassCard className="lg:col-span-3" id="moon-calendar">
-                      <MoonCalendar date={dateForMoon} latitude={latitudeForMoon} />
+            <div className="flex justify-center items-start h-full">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center text-foreground/80 gap-4 mt-20">
+                  <Loader className="w-12 h-12 animate-spin" />
+                  <p className="text-xl">{t('loading')}</p>
+                </div>
+              ) : error && !weatherData ? (
+                  <GlassCard className="mt-20 p-6">
+                    <div className="flex flex-col items-center justify-center text-destructive-foreground gap-4">
+                      <AlertTriangle className="w-12 h-12 text-destructive" />
+                      <h2 className="text-2xl font-bold">{t('errorTitle')}</h2>
+                      <p>{t(error.message)}</p>
+                      {error.errorDetail && (
+                         <Accordion type="single" collapsible className="w-full text-foreground/80">
+                           <AccordionItem value="item-1">
+                             <AccordionTrigger>Ver detalles técnicos</AccordionTrigger>
+                             <AccordionContent className="bg-black/20 p-2 rounded-md font-mono text-xs">
+                               {error.errorDetail}
+                             </AccordionContent>
+                           </AccordionItem>
+                         </Accordion>
+                      )}
+                    </div>
                   </GlassCard>
-                )}
-              </div>
-            ) : null}
+              ) : weatherData && displayData ? (
+                <div className="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
+                  <GlassCard className="lg:col-span-3" id="current-weather">
+                    <CurrentWeatherComponent data={displayData} hourlyData={hourlyData} />
+                  </GlassCard>
+                  <GlassCard className="lg:col-span-3" id="forecast">
+                    <Forecast 
+                      data={weatherData.forecast} 
+                      onDaySelect={handleDaySelect} 
+                      onShowToday={handleShowToday}
+                      selectedDayId={selectedDayId}
+                    />
+                  </GlassCard>
+                  {weatherData && currentDate && latitudeForMoon !== undefined && !isNaN(currentDate.getTime()) && (
+                    <GlassCard className="lg:col-span-3" id="moon-calendar">
+                        <MoonCalendar date={currentDate} latitude={latitudeForMoon} />
+                    </GlassCard>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
         </main>
         <ApiAttribution />
