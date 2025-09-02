@@ -4,9 +4,11 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster"
+import { Analytics } from '@vercel/analytics/react';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
+// Use the production URL as the base for SEO, but allow override via environment variable.
 const APP_URL = new URL(process.env.APP_URL || 'https://clima.clancig.com.ar');
 
 export const metadata: Metadata = {
@@ -68,6 +70,7 @@ export default function RootLayout({
       <body className={cn('font-sans antialiased', inter.variable)}>
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );

@@ -1,13 +1,13 @@
 
 # WeatherWise - Pronóstico del Tiempo en Tiempo Real con IA
 
-![Captura de Pantalla de WeatherWise](public/assets/screenshot.png)
+[![Captura de Pantalla de WeatherWise](public/assets/screenshot.png)](https://clima.clancig.com.ar)
+
+### 🚀 [Ver Demo en Vivo](https://clima.clancig.com.ar) 🚀
 
 **WeatherWise** es una aplicación web moderna y elegante que proporciona pronósticos del tiempo en tiempo real para cualquier ciudad del mundo. Construida con tecnologías de vanguardia, ofrece una experiencia de usuario rápida, receptiva e inmersiva, destacando por sus **fondos de pantalla dinámicos generados por Inteligencia Artificial** que reflejan el clima actual de la ciudad consultada.
 
 La aplicación detecta automáticamente la ubicación del usuario para proporcionar un pronóstico local instantáneo. La interfaz está diseñada para ser limpia e informativa, con iconos animados y un diseño futurista tipo "tarjeta de cristal".
-
-**Demo en Vivo:** [clima.clancig.com.ar](https://clima.clancig.com.ar)
 
 ---
 
@@ -75,11 +75,13 @@ Sigue estas instrucciones para obtener una copia local del proyecto y ponerla en
     Crea un archivo llamado `.env.local` en la raíz de tu proyecto. Necesitarás una API Key de Google AI para la generación de imágenes. Puedes obtenerla gratis en [Google AI Studio](https://aistudio.google.com/app/apikey).
 
     ```.env.local
-    # URL de tu aplicación (para desarrollo local)
-    APP_URL=http://localhost:9002
-
     # Clave de API de Google AI Studio para Gemini
     GEMINI_API_KEY=tu_api_key_aqui
+
+    # URL de tu aplicación (opcional para desarrollo, recomendado para producción)
+    # Por defecto, se usará http://localhost:9002 si no se especifica.
+    # Para producción, cámbiala a tu dominio. Ejemplo:
+    # APP_URL=https://clima.clancig.com.ar
     ```
 
 ### Ejecutar la Aplicación
