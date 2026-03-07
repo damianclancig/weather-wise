@@ -88,6 +88,11 @@ const es = {
     button_paypal: "Colaborar con PayPal",
     button_portfolio: "Visitar mi Portfolio",
     button_github: "Ver en GitHub",
+  },
+  notFound: {
+    title: "404 - Página no encontrada",
+    message: "¡Ups! Parece que te has perdido en las nubes. La página que buscas no existe o ha sido movida.",
+    button: "Volver al Inicio",
   }
 };
 

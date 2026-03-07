@@ -89,6 +89,11 @@ const en = {
     button_paypal: "Support with PayPal",
     button_portfolio: "Visit my Portfolio",
     button_github: "See on GitHub",
+  },
+  notFound: {
+    title: "404 - PageNot Found",
+    message: "Oops! It seems you've got lost in the clouds. The page you're looking for doesn't exist or has been moved.",
+    button: "Back to Home",
   }
 };
 
