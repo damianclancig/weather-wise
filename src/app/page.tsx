@@ -25,9 +25,9 @@ export default async function Home({ searchParams }: PageProps) {
   const lang = (params.lang as Locale) || 'es'; // Forzar 'es' como base para evitar mismatch de hidratación
 
   return (
-    <TranslationProvider initialLocale={lang}>
+    <>
       <StructuredData lang={lang} />
       <WeatherMain initialLocale={lang} />
-    </TranslationProvider>
+    </>
   );
 }

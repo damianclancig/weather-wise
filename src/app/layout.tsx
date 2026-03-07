@@ -8,6 +8,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import Script from 'next/script';
 import { dictionaries, defaultLocale } from '@/lib/i18n';
+import { TranslationProvider } from '@/components/layout/translation-provider';
 
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -124,12 +125,14 @@ export default function RootLayout({
         )}
       </head>
       <body className={cn('font-sans antialiased', inter.variable)}>
-        {children}
-        <Toaster />
-        <Analytics />
-        <SpeedInsights />
-        {/* Registro estándar y tradicional para máxima compatibilidad de Service Worker */}
-        <script defer src="/register-sw.js"></script>
+        <TranslationProvider initialLocale="es">
+          {children}
+          <Toaster />
+          <Analytics />
+          <SpeedInsights />
+          {/* Registro estándar y tradicional para máxima compatibilidad de Service Worker */}
+          <script defer src="/register-sw.js"></script>
+        </TranslationProvider>
       </body>
     </html>
   );
